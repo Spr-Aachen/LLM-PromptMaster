@@ -3,6 +3,7 @@ import sys
 import json
 import requests
 import pytz
+import pandas
 from typing import Optional
 from datetime import date, datetime
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -15,6 +16,22 @@ from PySide6.QtWidgets import *
 from QEasyWidgets.Utils import *
 from QEasyWidgets.QTasks import *
 from QEasyWidgets.WindowCustomizer import *
+
+
+# Offline method to get available models for each url
+ModelDict = {
+    "transsion.com": [
+        'gpt-35-turbo',
+        'gpt4-8k',
+        'gpt-4o'
+    ],
+    "dashscope.aliyuncs.com": [
+        'qwen-vl-chat-v1'
+    ],
+    "api.together.xyz": [
+        'Qwen/Qwen1.5-110B-Chat'
+    ]
+}
 
 
 def GPTRequest(
@@ -144,6 +161,17 @@ def BuildMessageMarkdown(messages: list[dict]):
     return markdown
 
 
+def updateModels(NewURL): # Should add request method in the future (see ref in dashscope)
+    assert ModelDict.__len__() > 0, "ModelDict should not be empty!"
+    keywordURLs = list(ModelDict.keys())
+    for keywordURL in keywordURLs:
+        if keywordURL in NewURL:
+            Models = ModelDict[keywordURL]
+            return Models
+        elif keywordURLs.index(keywordURL) == keywordURLs.__len__():
+            raise Exception("URL not found, plz update ModelDict!")
+
+
 class RequestThread(QThread):
     textReceived = Signal(str)
 
@@ -179,9 +207,70 @@ class RequestThread(QThread):
         self.textReceived.emit(text)
 
 
-class Window(QWidget):
+class TestWindow(DialogBase):
     '''
+    Dialog Window
     '''
+    QuestionList = []
+
+    def __init__(self, parent = None):
+        super().__init__(parent)
+
+        self.resize(360, 240)
+
+    def initUI(self):
+        self.Label = QLabel()
+        self.Label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.Input_FilePath = LineEditBase()
+
+        self.Input_Column = LineEditBase()
+
+        self.Button_Confirm = QPushButton('Confirm', self)
+
+        self.Button_Cancel = QPushButton('Cancel', self)
+
+        Layout = QGridLayout(self)
+        Layout.addWidget(self.Label, 0, 0, 1, 2)
+        Layout.addWidget(self.Input_FilePath, 1, 0, 1, 2)
+        Layout.addWidget(self.Input_Column, 2, 0, 1, 2)
+        Layout.addWidget(self.Button_Confirm, 3, 0, 1, 1)
+        Layout.addWidget(self.Button_Cancel, 3, 1, 1, 1)
+        Layout.setRowStretch(0, 1)
+
+    def LoadQuestions(self):
+        FilePath = self.Input_FilePath.text()
+        if Path(FilePath).exists():
+            excelDF = pandas.read_excel(FilePath, usecols = self.Input_Column.text().strip())
+            self.QuestionList = excelDF.iloc[:, 0].to_list()
+
+    def exec(self):
+        self.initUI()
+
+        self.Label.setText("Plz provide ur excel file path and its column letter:")
+
+        self.Input_FilePath.SetFileDialog('SelectFile', '表格 (*.csv *.xlsx)')
+        self.Input_FilePath.setAcceptDrops(True)
+        self.Input_FilePath.setPlaceholderText("Please enter the excel file path to load")
+
+        self.Input_Column.RemoveFileDialogButton()
+        self.Input_Column.setAcceptDrops(False)
+        self.Input_Column.setPlaceholderText("Please enter the column where questions are located")
+
+        self.Button_Confirm.clicked.connect(self.LoadQuestions, Qt.ConnectionType.QueuedConnection)
+        self.Button_Confirm.clicked.connect(self.close, Qt.ConnectionType.QueuedConnection)
+
+        self.Button_Cancel.clicked.connect(self.close)
+
+        super().exec()
+
+
+class MainWindow(QWidget):
+    '''
+    Main Window
+    '''
+    Models = []
+
     roles = {
         "无": """
         """,
@@ -220,49 +309,31 @@ class Window(QWidget):
                 "fightFallCityCode": "目的城市代码"
             }
             - 结果中仅包含JSON数组
-        """,
-        "写作助理": """
-            As a writing improvement assistant, your task is to improve the spelling, grammar, clarity, concision, and overall readability of the text provided.
-            While breaking down long sentences, reducing repetition, and providing suggestions for improvement.
-            Please provide only the corrected Chinese version of the text and avoid including explanations. Please begin by editing the following text: [文章内容]
         """
     }
-    Messages = []
+    MessagesDict = {}
 
     HistoryDir = './Conversations'
-    currentFileName = ''
+    ConversationFilePath = ''
 
     thread = None
 
     def __init__(self):
         super().__init__()
 
-        self.initUI()
-
-        self.LoadHistoryList()
-
-        self.CreateConversation()
+        self.resize(900, 600)
 
     def initUI(self):
         # Top area
         self.Input_URL = QLineEdit(self)
-        self.Input_URL.setPlaceholderText("Please enter the URL")
-        self.Input_URL.setText("https://gptgateway-uat.transsion.com")
 
         self.Input_APIKey = QLineEdit(self)
-        self.Input_APIKey.setPlaceholderText("Please enter your API key")
-        self.Input_APIKey.setText("tITFPtSs9lLXD4a0xuLlGPTrwPNftZ0g")
 
         self.Input_APPID = QLineEdit(self)
-        self.Input_APPID.setPlaceholderText("Please enter your APP ID (Leave this empty if u don't have any)")
-        self.Input_APPID.setText("c_MjIxMTI1MDAxbQ")
 
         self.ModelSelector = QComboBox(self)
-        self.ModelSelector.addItems(['gpt-4o', '...']) # Should sync it with URL in the future
 
         self.RoleSelector = QComboBox(self)
-        self.RoleSelector.addItems(self.roles.keys())
-        self.RoleSelector.currentIndexChanged.connect(self.ApplyRole)
 
         Layout_Top = QGridLayout()
         Layout_Top.addWidget(self.Input_URL, 0, 1, 1, 2)
@@ -275,42 +346,24 @@ class Window(QWidget):
         self.Browser = QTextBrowser(self)
 
         self.InputArea = TextEditBase(self)
-        self.InputArea.keyEnterPressed.connect(self.Query)
-        self.InputArea.setPlaceholderText(
-            """
-            请在此区域输入您的问题，点击 Send 或按下 Ctrl+Enter 发送提问
-            当答案开始输出的时候，问题才会显示，请不要着急
-            如果只返回了问题，而没有答案，请等待几秒或者换一个模型试试
-            """
-        )
-        self.InputArea.setText(
-            """
-            1.  TG340  V1  TH01AUG  DACBKK DK1   0245 0615       达卡-曼谷
-                2.  TG664  V1  TH01AUG  BKKPVG DK1   1045 1600      曼谷-上海浦东
-                3930+35=3965CNY        25KG    改期USD50,退票USD100,误机USD150,部分税费不退
-            """
-        )
+
+        self.Button_Load = QPushButton('Load Questions from File', self)
 
         self.Button_Send = QPushButton('Send', self)
-        self.Button_Send.clicked.connect(self.Query)
     
         self.Button_Test = QPushButton('Test', self)
-        self.Button_Test.clicked.connect(self.QueryTest)
 
         Layout_Right = QGridLayout()
         Layout_Right.addWidget(self.Browser, 0, 0, 5, 2)
         Layout_Right.addWidget(self.InputArea, 5, 0, 2, 2)
-        Layout_Right.addWidget(self.Button_Send, 7, 0, 1, 1)
-        Layout_Right.addWidget(self.Button_Test, 7, 1, 1, 1)
+        Layout_Right.addWidget(self.Button_Load, 7, 0, 1, 2)
+        Layout_Right.addWidget(self.Button_Send, 8, 0, 1, 1)
+        Layout_Right.addWidget(self.Button_Test, 8, 1, 1, 1)
 
         # Left area
         self.HistoryList = QListWidget(self)
-        self.HistoryList.itemClicked.connect(self.LoadHistory)
-        self.HistoryList.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.HistoryList.customContextMenuRequested.connect(self.ShowContextMenu)
 
         self.Button_CreateConversation = QPushButton('New Conversation', self)
-        self.Button_CreateConversation.clicked.connect(self.CreateConversation)
 
         Layout_Left = QVBoxLayout()
         Layout_Left.addWidget(self.HistoryList)
@@ -323,31 +376,27 @@ class Window(QWidget):
         Layout.addLayout(Layout_Right, 1, 1, 4, 3)
         Layout.setColumnStretch(1, 1)
 
-    def ApplyRole(self):
-        self.Messages.clear(),
-        self.Messages.append(
-            {
-                'role': 'assistant',
-                'content': self.roles[self.RoleSelector.currentText()]
-            }
-        )
+    def UpdateModels(self):
+        self.Models = updateModels(self.Input_URL.text())
+        self.ModelSelector.clear()
+        self.ModelSelector.addItems(self.Models)
 
     def renameConversation(self):
-        current_item = self.HistoryList.currentItem()
-        if current_item:
-            old_name = current_item.text()
+        currentItem = self.HistoryList.currentItem()
+        if currentItem:
+            old_name = currentItem.text()
             new_name, ok = QInputDialog.getText(self,
                 'Rename Conversation',
                 'Enter new conversation name:'
             )
             if ok and new_name:
-                self.currentFilePath = Path(self.HistoryDir).joinpath(new_name + '.txt').as_posix()
-                os.rename(self.HistoryDir + old_name + '.txt', self.currentFilePath)
-                current_item.setText(new_name)
+                self.ConversationFilePath = Path(self.HistoryDir).joinpath(f"{new_name}.txt").as_posix()
+                os.rename(Path(self.HistoryDir).joinpath(f"{old_name}.txt"), self.ConversationFilePath)
+                currentItem.setText(new_name)
 
     def deleteConversation(self):
-        current_item = self.HistoryList.currentItem()
-        if current_item:
+        currentItem = self.HistoryList.currentItem()
+        if currentItem:
             confirm = QMessageBox.question(self,
                 'Delete Conversation',
                 'Are you sure you want to delete this conversation?',
@@ -355,10 +404,10 @@ class Window(QWidget):
                 QMessageBox.No
             )
             if confirm == QMessageBox.Yes:
-                row = self.HistoryList.row(current_item)
+                row = self.HistoryList.row(currentItem)
                 self.HistoryList.takeItem(row)
                 self.Browser.clear()
-                os.remove(Path(self.HistoryDir).joinpath(current_item.text() + '.txt').as_posix())
+                os.remove(Path(self.HistoryDir).joinpath(currentItem.text() + '.txt').as_posix())
 
     def ShowContextMenu(self, position):
         context_menu = QMenu(self)
@@ -370,74 +419,116 @@ class Window(QWidget):
         context_menu.exec(self.HistoryList.mapToGlobal(position))
 
     def LoadHistoryList(self):
-        self.HistoryList.clear()
         # Check if the conversations directory exists
         if not os.path.exists(self.HistoryDir):
             os.makedirs(self.HistoryDir)
-        for file in os.listdir(self.HistoryDir):
-            if file.endswith('.txt'):
-                self.HistoryList.addItem(file[:-4]) # Remove the .txt extension
+        # Remove empty conversations and add the rest to history list
+        self.HistoryList.clear()
+        for HistoryFileName in os.listdir(self.HistoryDir):
+            if HistoryFileName.endswith('.txt'):
+                HistoryFilePath = Path(self.HistoryDir).joinpath(HistoryFileName).as_posix()
+                if os.path.getsize(HistoryFilePath) == 0:
+                    os.remove(HistoryFilePath)
+                    continue
+                self.HistoryList.addItem(HistoryFileName[:-4]) # Remove the .txt extension
 
-    def LoadHistory(self, item: QListWidgetItem):
-        self.Browser.clear()
-        # Load a conversation from a txt file and display it in the conversation window
-        self.currentFilePath = Path(self.HistoryDir).joinpath(item.text() + '.txt').as_posix()
-        with open(self.currentFilePath, 'r', encoding = 'utf-8') as f:
-            self.Messages = [json.loads(line) for line in f]
+    def LoadCurrentHistory(self, item: QListWidgetItem):
+        # Load a conversation from a txt file and display it in the browser
+        self.ConversationFilePath = Path(self.HistoryDir).joinpath(f"{item.text()}.txt").as_posix()
+        with open(self.ConversationFilePath, 'r', encoding = 'utf-8') as f:
+            Messages = [json.loads(line) for line in f]
         # Build&Set Markdown
-        markdown = BuildMessageMarkdown(self.Messages)
+        markdown = BuildMessageMarkdown(Messages)
         self.Browser.setText(markdown) #self.Browser.setMarkdown(markdown)
 
+    def ApplyRole(self):
+        Messages = [
+            {
+                'role': 'assistant',
+                'content': self.roles[self.RoleSelector.currentText()]
+            }
+        ]
+        self.MessagesDict[Path(self.ConversationFilePath).stem] = Messages
+        return Messages
+
     def CreateConversation(self):
-        self.ApplyRole()
         # Get the current time as the name of conversation
         beijing_timezone = pytz.timezone('Asia/Shanghai')
         formatted_time = datetime.now(beijing_timezone).strftime("%Y_%m_%d_%H_%M_%S")
-        # Add the given name to the history list
-        self.HistoryList.addItem(formatted_time)
-        # Save the current conversation to a txt file with the given name
-        self.currentFilePath = Path(self.HistoryDir).joinpath(formatted_time + '.txt').as_posix()
-        with open(self.currentFilePath, 'w', encoding = 'utf-8') as f:
+        # Check if the path would be overwritten
+        FilePath = Path(self.HistoryDir).joinpath(f"{formatted_time}.txt")
+        Directory, FileName = os.path.split(FilePath)
+        while Path(FilePath).exists():
+            pattern = r'(\d+)\)\.'
+            if re.search(pattern, FileName) is None:
+                FileName = FileName.replace('.', '(0).')
+            else:
+                CurrentNumber = int(re.findall(pattern, FileName)[-1])
+                FileName = FileName.replace(f'({CurrentNumber}).', f'({CurrentNumber + 1}).')
+            FilePath = Path(Directory).joinpath(FileName).as_posix()
+        # Update the history file path
+        self.ConversationFilePath = FilePath
+        self.ApplyRole()
+        # Set the files & browser
+        with open(self.ConversationFilePath, 'w', encoding = 'utf-8') as f:
             f.write('')
-        # Clear the conversation window
         self.Browser.clear()
+        # Add the given name to the history list
+        self.HistoryList.addItem(Path(self.ConversationFilePath).stem)
 
-    def updateText(self):
+    def saveConversation(self, Messages: list):
+        with open(self.ConversationFilePath, 'w', encoding = 'utf-8') as f:
+            ConversationStr = '\n'.join(json.dumps(message) for message in Messages)
+            f.write(ConversationStr)
+
+    def LoadQuestions(self):
+        ChildWindow_Test = TestWindow(self)
+        ChildWindow_Test.exec()
+        Questions =  ChildWindow_Test.QuestionList
+        for Question in Questions:
+            self.CreateConversation()
+            self.InputArea.setText(Question)
+            #self.Query()
+
+    def updateRecord(self):
+        Messages = self.MessagesDict[Path(self.ConversationFilePath).stem]
         # Build&Set Markdown
-        markdown = BuildMessageMarkdown(self.Messages)
+        markdown = BuildMessageMarkdown(Messages)
         self.Browser.setText(markdown) #self.Browser.setMarkdown(markdown)
         # Move the scrollbar to the bottom
         cursor = self.Browser.textCursor()
         cursor.movePosition(QTextCursor.End)
         self.Browser.setTextCursor(cursor)
         # Save the current conversation to a txt file with the given name
-        with open(self.currentFilePath, 'w', encoding = 'utf-8') as f:
-            conversation_str = '\n'.join(json.dumps(message) for message in self.Messages)
-            f.write(conversation_str)
+        self.saveConversation(Messages)
 
     def recieveAnswer(self, recievedText):
-        if self.Messages[-1]['role'] == 'user':
-            self.Messages.append({'role': 'assistant', 'content': recievedText})
+        Messages = self.MessagesDict[Path(self.ConversationFilePath).stem]
+        if Messages[-1]['role'] == 'user':
+            Messages.append({'role': 'assistant', 'content': recievedText})
         '''
         else:
-            self.Messages[-1]['content'] += recievedText
+            Messages[-1]['content'] += recievedText
         '''
-        self.updateText()
+        self.MessagesDict[Path(self.ConversationFilePath).stem] = Messages
+        self.updateRecord()
 
     def startThread(self):
+        Messages = self.MessagesDict[Path(self.ConversationFilePath).stem]
         InputContent = self.InputArea.toPlainText()
-        if InputContent.strip() != "":
+        if InputContent.strip().__len__() > 0:
             if self.thread is not None and self.thread.isRunning():
                 self.thread.terminate()
                 self.thread.wait()
-            self.Messages.append({'role': 'user', 'content': InputContent})
-            self.updateText()
+            Messages.append({'role': 'user', 'content': InputContent})
+            self.MessagesDict[Path(self.ConversationFilePath).stem] = Messages
+            self.updateRecord()
             self.thread = RequestThread(
                 URL = self.Input_URL.text(),
                 APP_ID = self.Input_APPID.text(),
                 API_key = self.Input_APIKey.text(),
                 Model = self.ModelSelector.currentText(),
-                Messages = self.Messages
+                Messages = Messages
             )
             self.thread.textReceived.connect(self.recieveAnswer)
             self.thread.start()
@@ -447,16 +538,18 @@ class Window(QWidget):
         self.InputArea.clear()
 
     def QueryTest(self):
-        Answers = []
+        TotalTestTimes, ok = QInputDialog.getText(self,
+            'Set Testing Times',
+            'Enter testing times:'
+        )
+        if ok and TotalTestTimes:
+            self.TotalTestTimes = TotalTestTimes
+        else:
+            return
         self.CurrentTestTime = 1
         print('Current test time:', self.CurrentTestTime)
-        self.TotalTestTimes = int(
-            QInputDialog.getText(self,
-                'Set Testing Times',
-                'Enter testing times:'
-            )[0]
-        )
         Input = self.InputArea.toPlainText()
+        Answers = []
         def collectAnswers(recievedText):
             self.CurrentTestTime += 1
             if self.CurrentTestTime <= self.TotalTestTimes:
@@ -474,14 +567,82 @@ class Window(QWidget):
                 MsgBox.setWindowTitle('Test Result')
                 MsgBox.setText(f'The similarity matrix is:\n{similarity_matrix}')
                 MsgBox.exec()
-                print(f'The similarity matrix is:\n{similarity_matrix}') # In case the result is too large to display
+                # Save the test result
+                csvPath = './TestResult.csv'
+                TestResults = {
+                    'CodeInput': [Input],
+                    'Answer': [Answers[0]],
+                    'SimilarityMatrix': [similarity_matrix]
+                }
+                TestResultsDF = pandas.DataFrame(TestResults)
+                if Path(csvPath).exists():
+                    TestResultsDF = pandas.concat([pandas.read_csv(csvPath), TestResultsDF], ignore_index = True)
+                    TestResultsDF.reset_index()
+                TestResultsDF.to_csv(csvPath, index = False)
         self.startThread()
         self.thread.textReceived.connect(collectAnswers)
 
+    def Main(self):
+        self.initUI()
+
+        # Top area
+        self.Input_URL.textChanged.connect(self.UpdateModels)
+        self.Input_URL.setPlaceholderText("Please enter the URL")
+        self.Input_URL.setText("https://gptgateway-uat.transsion.com")
+
+        self.Input_APIKey.setPlaceholderText("Please enter your API key")
+        self.Input_APIKey.setText("tITFPtSs9lLXD4a0xuLlGPTrwPNftZ0g")
+
+        self.Input_APPID.setPlaceholderText("Please enter your APP ID (Leave this empty if u don't have any)")
+        self.Input_APPID.setText("c_MjIxMTI1MDAxbQ")
+
+        self.ModelSelector.setCurrentIndex(self.ModelSelector.count() - 1) # Select the last index as default
+
+        self.RoleSelector.addItems(self.roles.keys())
+        self.RoleSelector.currentIndexChanged.connect(self.ApplyRole)
+
+        # Right area
+        self.InputArea.keyEnterPressed.connect(self.Query)
+        self.InputArea.setPlaceholderText(
+            """
+            请在此区域输入您的问题，点击 Send 或按下 Ctrl+Enter 发送提问
+            如果只返回了问题而没有答案，请等待几秒或者换一个模型试试
+            """
+        )
+
+        self.Button_Load.clicked.connect(self.LoadQuestions)
+
+        self.Button_Send.clicked.connect(self.Query)
+
+        self.Button_Test.clicked.connect(self.QueryTest)
+
+        # Left area
+        self.HistoryList.itemClicked.connect(self.LoadCurrentHistory)
+        self.HistoryList.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.HistoryList.customContextMenuRequested.connect(self.ShowContextMenu)
+
+        self.Button_CreateConversation.clicked.connect(self.CreateConversation)
+
+        # Load histories
+        self.LoadHistoryList()
+
+        # Create a new conversation
+        self.CreateConversation()
+
+        # Show window
+        self.show()
+
+        # Init input
+        self.InputArea.setText(
+            """
+            1.  TG340  V1  TH01AUG  DACBKK DK1   0245 0615       达卡-曼谷
+                2.  TG664  V1  TH01AUG  BKKPVG DK1   1045 1600      曼谷-上海浦东
+                3930+35=3965CNY        25KG    改期USD50,退票USD100,误机USD150,部分税费不退
+            """
+        )
 
 if __name__ == '__main__':
     App = QApplication(sys.argv)
-    window = Window()
-    window.resize(900, 600)
-    window.show()
+    window = MainWindow()
+    window.Main()
     sys.exit(App.exec())
