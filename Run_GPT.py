@@ -226,6 +226,8 @@ class TestWindow(DialogBase):
 
         self.Input_Column = LineEditBase()
 
+        self.Input_Amount = LineEditBase()
+
         self.Button_Confirm = QPushButton('Confirm', self)
 
         self.Button_Cancel = QPushButton('Cancel', self)
@@ -234,8 +236,9 @@ class TestWindow(DialogBase):
         Layout.addWidget(self.Label, 0, 0, 1, 2)
         Layout.addWidget(self.Input_FilePath, 1, 0, 1, 2)
         Layout.addWidget(self.Input_Column, 2, 0, 1, 2)
-        Layout.addWidget(self.Button_Confirm, 3, 0, 1, 1)
-        Layout.addWidget(self.Button_Cancel, 3, 1, 1, 1)
+        Layout.addWidget(self.Input_Amount, 3, 0, 1, 2)
+        Layout.addWidget(self.Button_Confirm, 4, 0, 1, 1)
+        Layout.addWidget(self.Button_Cancel, 4, 1, 1, 1)
         Layout.setRowStretch(0, 1)
 
     def LoadQuestions(self):
@@ -243,6 +246,9 @@ class TestWindow(DialogBase):
         if Path(FilePath).exists():
             excelDF = pandas.read_excel(FilePath, usecols = self.Input_Column.text().strip())
             self.QuestionList = excelDF.iloc[:, 0].to_list()
+        MaximumAmount = self.Input_Amount.text().strip()
+        if MaximumAmount.__len__() > 0 and self.QuestionList.__len__() > int(MaximumAmount) > 0 :
+            self.QuestionList = self.QuestionList[:int(MaximumAmount)]
 
     def exec(self):
         self.initUI()
@@ -256,6 +262,10 @@ class TestWindow(DialogBase):
         self.Input_Column.RemoveFileDialogButton()
         self.Input_Column.setAcceptDrops(False)
         self.Input_Column.setPlaceholderText("Please enter the column where questions are located")
+
+        self.Input_Amount.RemoveFileDialogButton()
+        self.Input_Amount.setAcceptDrops(False)
+        self.Input_Amount.setPlaceholderText("Please enter the maximum amount of questions")
 
         self.Button_Confirm.clicked.connect(self.LoadQuestions, Qt.ConnectionType.QueuedConnection)
         self.Button_Confirm.clicked.connect(self.close, Qt.ConnectionType.QueuedConnection)
@@ -313,8 +323,10 @@ class MainWindow(QWidget):
     }
     MessagesDict = {}
 
-    HistoryDir = './Conversations'
+    ConversationDir = './Conversations'
     ConversationFilePath = ''
+    QuestionDir = './Questions'
+    QuestionFilePath = ''
 
     thread = None
 
@@ -361,12 +373,12 @@ class MainWindow(QWidget):
         Layout_Right.addWidget(self.Button_Test, 8, 1, 1, 1)
 
         # Left area
-        self.HistoryList = QListWidget(self)
+        self.ConversationList = QListWidget(self)
 
         self.Button_CreateConversation = QPushButton('New Conversation', self)
 
         Layout_Left = QVBoxLayout()
-        Layout_Left.addWidget(self.HistoryList)
+        Layout_Left.addWidget(self.ConversationList)
         Layout_Left.addWidget(self.Button_CreateConversation)
 
         # Combine layouts
@@ -382,7 +394,7 @@ class MainWindow(QWidget):
         self.ModelSelector.addItems(self.Models)
 
     def renameConversation(self):
-        currentItem = self.HistoryList.currentItem()
+        currentItem = self.ConversationList.currentItem()
         if currentItem:
             old_name = currentItem.text()
             new_name, ok = QInputDialog.getText(self,
@@ -390,12 +402,14 @@ class MainWindow(QWidget):
                 'Enter new conversation name:'
             )
             if ok and new_name:
-                self.ConversationFilePath = Path(self.HistoryDir).joinpath(f"{new_name}.txt").as_posix()
-                os.rename(Path(self.HistoryDir).joinpath(f"{old_name}.txt"), self.ConversationFilePath)
+                self.ConversationFilePath = Path(self.ConversationDir).joinpath(f"{new_name}.txt").as_posix()
+                os.rename(Path(self.ConversationDir).joinpath(f"{old_name}.txt"), self.ConversationFilePath)
                 currentItem.setText(new_name)
+                self.QuestionFilePath = Path(self.QuestionDir).joinpath(f"{new_name}.txt").as_posix()
+                os.rename(Path(self.QuestionDir).joinpath(f"{old_name}.txt"), self.QuestionFilePath)
 
     def deleteConversation(self):
-        currentItem = self.HistoryList.currentItem()
+        currentItem = self.ConversationList.currentItem()
         if currentItem:
             confirm = QMessageBox.question(self,
                 'Delete Conversation',
@@ -404,10 +418,11 @@ class MainWindow(QWidget):
                 QMessageBox.No
             )
             if confirm == QMessageBox.Yes:
-                row = self.HistoryList.row(currentItem)
-                self.HistoryList.takeItem(row)
+                row = self.ConversationList.row(currentItem)
+                self.ConversationList.takeItem(row)
                 self.Browser.clear()
-                os.remove(Path(self.HistoryDir).joinpath(currentItem.text() + '.txt').as_posix())
+                os.remove(Path(self.ConversationDir).joinpath(currentItem.text() + '.txt').as_posix())
+                os.remove(Path(self.QuestionDir).joinpath(currentItem.text() + '.txt').as_posix())
 
     def ShowContextMenu(self, position):
         context_menu = QMenu(self)
@@ -416,39 +431,51 @@ class MainWindow(QWidget):
         rename_action = QAction("Rename Conversation", self)
         rename_action.triggered.connect(self.renameConversation)
         context_menu.addActions([delete_action, rename_action])
-        context_menu.exec(self.HistoryList.mapToGlobal(position))
+        context_menu.exec(self.ConversationList.mapToGlobal(position))
 
-    def LoadHistoryList(self):
+    def LoadConversationList(self):
         # Check if the conversations directory exists
-        if not os.path.exists(self.HistoryDir):
-            os.makedirs(self.HistoryDir)
-        # Remove empty conversations and add the rest to history list
-        self.HistoryList.clear()
-        for HistoryFileName in os.listdir(self.HistoryDir):
+        if not os.path.exists(self.ConversationDir):
+            os.makedirs(self.ConversationDir)
+        # Check if the questions directory exists
+        if not os.path.exists(self.QuestionDir):
+            os.makedirs(self.QuestionDir)
+        # Remove empty conversations(&questions) and add the rest to history list
+        self.ConversationList.clear()
+        for HistoryFileName in os.listdir(self.ConversationDir):
             if HistoryFileName.endswith('.txt'):
-                HistoryFilePath = Path(self.HistoryDir).joinpath(HistoryFileName).as_posix()
+                HistoryFilePath = Path(self.ConversationDir).joinpath(HistoryFileName).as_posix()
+                QuestionFilePath = Path(self.QuestionDir).joinpath(HistoryFileName).as_posix()
                 if os.path.getsize(HistoryFilePath) == 0:
                     os.remove(HistoryFilePath)
+                    os.remove(QuestionFilePath) if Path(QuestionFilePath).exists() else None
                     continue
-                self.HistoryList.addItem(HistoryFileName[:-4]) # Remove the .txt extension
+                self.ConversationList.addItem(HistoryFileName[:-4]) # Remove the .txt extension
 
     def LoadCurrentHistory(self, item: QListWidgetItem):
         # Load a conversation from a txt file and display it in the browser
-        self.ConversationFilePath = Path(self.HistoryDir).joinpath(f"{item.text()}.txt").as_posix()
+        self.ConversationFilePath = Path(self.ConversationDir).joinpath(item.text() + '.txt').as_posix()
         with open(self.ConversationFilePath, 'r', encoding = 'utf-8') as f:
             Messages = [json.loads(line) for line in f]
         # Build&Set Markdown
         markdown = BuildMessageMarkdown(Messages)
         self.Browser.setText(markdown) #self.Browser.setMarkdown(markdown)
+        # Load a question from the txt file and display it in the input area
+        self.QuestionFilePath = Path(self.QuestionDir).joinpath(item.text() + '.txt').as_posix()
+        with open(self.QuestionFilePath, 'r', encoding = 'utf-8') as f:
+            Question = f.read()
+        # Set qustion
+        self.InputArea.setText(Question)
 
     def ApplyRole(self):
+        ConversationName = Path(self.ConversationFilePath).stem# if self.ConversationList.currentItem() is None else self.ConversationList.currentItem().text()
         Messages = [
             {
                 'role': 'assistant',
                 'content': self.roles[self.RoleSelector.currentText()]
             }
         ]
-        self.MessagesDict[Path(self.ConversationFilePath).stem] = Messages
+        self.MessagesDict[ConversationName] = Messages
         return Messages
 
     def CreateConversation(self):
@@ -456,7 +483,7 @@ class MainWindow(QWidget):
         beijing_timezone = pytz.timezone('Asia/Shanghai')
         formatted_time = datetime.now(beijing_timezone).strftime("%Y_%m_%d_%H_%M_%S")
         # Check if the path would be overwritten
-        FilePath = Path(self.HistoryDir).joinpath(f"{formatted_time}.txt")
+        FilePath = Path(self.ConversationDir).joinpath(f"{formatted_time}.txt")
         Directory, FileName = os.path.split(FilePath)
         while Path(FilePath).exists():
             pattern = r'(\d+)\)\.'
@@ -466,20 +493,34 @@ class MainWindow(QWidget):
                 CurrentNumber = int(re.findall(pattern, FileName)[-1])
                 FileName = FileName.replace(f'({CurrentNumber}).', f'({CurrentNumber + 1}).')
             FilePath = Path(Directory).joinpath(FileName).as_posix()
-        # Update the history file path
+        FileName = Path(FilePath).name
+        ConversationName = Path(FilePath).stem
+        # Update the history file path and the question file path
         self.ConversationFilePath = FilePath
-        self.ApplyRole()
+        self.QuestionFilePath = Path(self.QuestionDir).joinpath(FileName).as_posix()
         # Set the files & browser
         with open(self.ConversationFilePath, 'w', encoding = 'utf-8') as f:
             f.write('')
         self.Browser.clear()
-        # Add the given name to the history list
-        self.HistoryList.addItem(Path(self.ConversationFilePath).stem)
+        with open(self.QuestionFilePath, 'w', encoding = 'utf-8') as f:
+            f.write('')
+        self.InputArea.clear()
+        # Add the given name to the history list and select it
+        NewConversation = QListWidgetItem(ConversationName)
+        self.ConversationList.addItem(NewConversation)
+        self.ConversationList.setCurrentItem(NewConversation)
+        # Init role
+        self.ApplyRole()
 
     def saveConversation(self, Messages: list):
         with open(self.ConversationFilePath, 'w', encoding = 'utf-8') as f:
             ConversationStr = '\n'.join(json.dumps(message) for message in Messages)
             f.write(ConversationStr)
+
+    def saveQuestion(self, Question: str):
+        with open(self.QuestionFilePath, 'w', encoding = 'utf-8') as f:
+            QuestionStr = Question.strip()
+            f.write(QuestionStr)
 
     def LoadQuestions(self):
         ChildWindow_Test = TestWindow(self)
@@ -490,11 +531,11 @@ class MainWindow(QWidget):
             self.InputArea.setText(Question)
             #self.Query()
 
-    def updateRecord(self):
-        Messages = self.MessagesDict[Path(self.ConversationFilePath).stem]
+    def updateRecord(self, ConversationName):
+        Messages = self.MessagesDict[ConversationName]
         # Build&Set Markdown
         markdown = BuildMessageMarkdown(Messages)
-        self.Browser.setText(markdown) #self.Browser.setMarkdown(markdown)
+        self.Browser.setText(markdown) if self.ConversationList.currentItem().text() == ConversationName else None #self.Browser.setMarkdown(markdown)
         # Move the scrollbar to the bottom
         cursor = self.Browser.textCursor()
         cursor.movePosition(QTextCursor.End)
@@ -502,27 +543,26 @@ class MainWindow(QWidget):
         # Save the current conversation to a txt file with the given name
         self.saveConversation(Messages)
 
-    def recieveAnswer(self, recievedText):
-        Messages = self.MessagesDict[Path(self.ConversationFilePath).stem]
+    def recieveAnswer(self, recievedText, ConversationName):
+        Messages = self.MessagesDict[ConversationName]
         if Messages[-1]['role'] == 'user':
             Messages.append({'role': 'assistant', 'content': recievedText})
         '''
         else:
             Messages[-1]['content'] += recievedText
         '''
-        self.MessagesDict[Path(self.ConversationFilePath).stem] = Messages
-        self.updateRecord()
+        self.MessagesDict[ConversationName] = Messages
+        self.updateRecord(ConversationName)
 
-    def startThread(self):
-        Messages = self.MessagesDict[Path(self.ConversationFilePath).stem]
-        InputContent = self.InputArea.toPlainText()
+    def startThread(self, InputContent, ConversationName):
+        Messages = self.MessagesDict[ConversationName]
         if InputContent.strip().__len__() > 0:
             if self.thread is not None and self.thread.isRunning():
                 self.thread.terminate()
                 self.thread.wait()
             Messages.append({'role': 'user', 'content': InputContent})
-            self.MessagesDict[Path(self.ConversationFilePath).stem] = Messages
-            self.updateRecord()
+            self.MessagesDict[ConversationName] = Messages
+            self.updateRecord(ConversationName)
             self.thread = RequestThread(
                 URL = self.Input_URL.text(),
                 APP_ID = self.Input_APPID.text(),
@@ -530,20 +570,24 @@ class MainWindow(QWidget):
                 Model = self.ModelSelector.currentText(),
                 Messages = Messages
             )
-            self.thread.textReceived.connect(self.recieveAnswer)
+            self.thread.textReceived.connect(lambda text: self.recieveAnswer(text, ConversationName))
             self.thread.start()
 
     def Query(self):
-        self.startThread()
+        InputContent = self.InputArea.toPlainText()
+        ConversationName = self.ConversationList.currentItem().text()
+        self.startThread(InputContent, ConversationName)
         self.InputArea.clear()
 
     def QueryTest(self):
+        InputContent = self.InputArea.toPlainText()
+        ConversationName = self.ConversationList.currentItem().text()
         TotalTestTimes, ok = QInputDialog.getText(self,
             'Set Testing Times',
             'Enter testing times:'
         )
         if ok and TotalTestTimes:
-            self.TotalTestTimes = TotalTestTimes
+            self.TotalTestTimes = int(TotalTestTimes)
         else:
             return
         self.CurrentTestTime = 1
@@ -555,10 +599,8 @@ class MainWindow(QWidget):
             if self.CurrentTestTime <= self.TotalTestTimes:
                 print('Current test time:', self.CurrentTestTime)
                 Answers.append(recievedText)
-                self.InputArea.setText(Input)
-                self.startThread()
+                self.startThread(InputContent, ConversationName)
                 self.thread.textReceived.connect(collectAnswers)
-                self.InputArea.clear()
             else: #if self.CurrentTestTime > self.TotalTestTimes:
                 tfidf_vectorizer = TfidfVectorizer()
                 tfidf_matrix = tfidf_vectorizer.fit_transform(Answers) # Transfer data into TF-IDF vector
@@ -579,8 +621,9 @@ class MainWindow(QWidget):
                     TestResultsDF = pandas.concat([pandas.read_csv(csvPath), TestResultsDF], ignore_index = True)
                     TestResultsDF.reset_index()
                 TestResultsDF.to_csv(csvPath, index = False)
-        self.startThread()
+        self.startThread(InputContent, ConversationName)
         self.thread.textReceived.connect(collectAnswers)
+        self.InputArea.clear()
 
     def Main(self):
         self.initUI()
@@ -602,6 +645,7 @@ class MainWindow(QWidget):
         self.RoleSelector.currentIndexChanged.connect(self.ApplyRole)
 
         # Right area
+        self.InputArea.textChanged.connect(self.saveQuestion)
         self.InputArea.keyEnterPressed.connect(self.Query)
         self.InputArea.setPlaceholderText(
             """
@@ -617,14 +661,14 @@ class MainWindow(QWidget):
         self.Button_Test.clicked.connect(self.QueryTest)
 
         # Left area
-        self.HistoryList.itemClicked.connect(self.LoadCurrentHistory)
-        self.HistoryList.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.HistoryList.customContextMenuRequested.connect(self.ShowContextMenu)
+        self.ConversationList.itemClicked.connect(self.LoadCurrentHistory)
+        self.ConversationList.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.ConversationList.customContextMenuRequested.connect(self.ShowContextMenu)
 
         self.Button_CreateConversation.clicked.connect(self.CreateConversation)
 
         # Load histories
-        self.LoadHistoryList()
+        self.LoadConversationList()
 
         # Create a new conversation
         self.CreateConversation()
@@ -632,14 +676,6 @@ class MainWindow(QWidget):
         # Show window
         self.show()
 
-        # Init input
-        self.InputArea.setText(
-            """
-            1.  TG340  V1  TH01AUG  DACBKK DK1   0245 0615       达卡-曼谷
-                2.  TG664  V1  TH01AUG  BKKPVG DK1   1045 1600      曼谷-上海浦东
-                3930+35=3965CNY        25KG    改期USD50,退票USD100,误机USD150,部分税费不退
-            """
-        )
 
 if __name__ == '__main__':
     App = QApplication(sys.argv)
