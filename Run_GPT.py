@@ -9,10 +9,9 @@ from datetime import date, datetime
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from PySide6.QtCore import Qt, QObject, Signal, Slot, QThread
-from PySide6.QtGui import QTextCursor, QAction
 from PySide6.QtCore import QCoreApplication as QCA
+from PySide6.QtGui import QTextCursor, QAction
 from PySide6.QtWidgets import *
-
 from QEasyWidgets.Utils import *
 from QEasyWidgets.QTasks import *
 from QEasyWidgets.WindowCustomizer import *
@@ -375,10 +374,13 @@ class MainWindow(QWidget):
         # Left area
         self.ConversationList = QListWidget(self)
 
+        self.Button_ClearConversations = QPushButton('Clear All', self)
+
         self.Button_CreateConversation = QPushButton('New Conversation', self)
 
         Layout_Left = QVBoxLayout()
         Layout_Left.addWidget(self.ConversationList)
+        Layout_Left.addWidget(self.Button_ClearConversations)
         Layout_Left.addWidget(self.Button_CreateConversation)
 
         # Combine layouts
@@ -395,7 +397,7 @@ class MainWindow(QWidget):
 
     def renameConversation(self):
         currentItem = self.ConversationList.currentItem()
-        if currentItem:
+        if currentItem is not None:
             old_name = currentItem.text()
             new_name, ok = QInputDialog.getText(self,
                 'Rename Conversation',
@@ -410,7 +412,7 @@ class MainWindow(QWidget):
 
     def deleteConversation(self):
         currentItem = self.ConversationList.currentItem()
-        if currentItem:
+        if currentItem is not None:
             confirm = QMessageBox.question(self,
                 'Delete Conversation',
                 'Are you sure you want to delete this conversation?',
@@ -423,6 +425,8 @@ class MainWindow(QWidget):
                 self.Browser.clear()
                 os.remove(Path(self.ConversationDir).joinpath(currentItem.text() + '.txt').as_posix())
                 os.remove(Path(self.QuestionDir).joinpath(currentItem.text() + '.txt').as_posix())
+                if self.ConversationList.count() > 0:
+                    self.LoadCurrentHistory(self.ConversationList.currentItem()) #self.ConversationList.click(self.ConversationList.currentItem())
 
     def ShowContextMenu(self, position):
         context_menu = QMenu(self)
@@ -467,16 +471,18 @@ class MainWindow(QWidget):
         # Set qustion
         self.InputArea.setText(Question)
 
+    def ClearConversations(self):
+        self.ConversationList.clear()
+
     def ApplyRole(self):
-        ConversationName = Path(self.ConversationFilePath).stem# if self.ConversationList.currentItem() is None else self.ConversationList.currentItem().text()
-        Messages = [
-            {
-                'role': 'assistant',
-                'content': self.roles[self.RoleSelector.currentText()]
-            }
-        ]
-        self.MessagesDict[ConversationName] = Messages
-        return Messages
+        for ConversationName, Messages in self.MessagesDict.items():
+            Messages.append(
+                {
+                    'role': 'assistant',
+                    'content': self.roles[self.RoleSelector.currentText()]
+                }
+            )
+            self.MessagesDict[ConversationName] = Messages
 
     def CreateConversation(self):
         # Get the current time as the name of conversation
@@ -509,7 +515,8 @@ class MainWindow(QWidget):
         NewConversation = QListWidgetItem(ConversationName)
         self.ConversationList.addItem(NewConversation)
         self.ConversationList.setCurrentItem(NewConversation)
-        # Init role
+        # Init message and role
+        self.MessagesDict[ConversationName] = []
         self.ApplyRole()
 
     def saveConversation(self, Messages: list):
@@ -555,6 +562,11 @@ class MainWindow(QWidget):
         self.updateRecord(ConversationName)
 
     def startThread(self, InputContent, ConversationName):
+        def blockList(block: bool):
+            self.ConversationList.setEnabled(block)
+            self.Button_ClearConversations.setEnabled(block)
+            self.Button_CreateConversation.setEnabled(block)
+        blockList(False)
         Messages = self.MessagesDict[ConversationName]
         if InputContent.strip().__len__() > 0:
             if self.thread is not None and self.thread.isRunning():
@@ -571,6 +583,7 @@ class MainWindow(QWidget):
                 Messages = Messages
             )
             self.thread.textReceived.connect(lambda text: self.recieveAnswer(text, ConversationName))
+            self.thread.textReceived.connect(lambda: blockList(True))
             self.thread.start()
 
     def Query(self):
@@ -611,16 +624,20 @@ class MainWindow(QWidget):
                 MsgBox.exec()
                 # Save the test result
                 csvPath = './TestResult.csv'
-                TestResults = {
+                TestResult = {
                     'CodeInput': [Input],
                     'Answer': [Answers[0]],
+                    'TestTimes': self.TotalTestTimes,
                     'SimilarityMatrix': [similarity_matrix]
                 }
-                TestResultsDF = pandas.DataFrame(TestResults)
+                TestResultDF = pandas.DataFrame(TestResult)
                 if Path(csvPath).exists():
-                    TestResultsDF = pandas.concat([pandas.read_csv(csvPath), TestResultsDF], ignore_index = True)
+                    TestResultsDF = pandas.read_csv(csvPath, encoding = 'utf-8')
+                    TestResultsDF.drop_duplicates()
+                    TestResultsDF = TestResultsDF[TestResultsDF['CodeInput'] != Input]
+                    TestResultsDF = pandas.concat([TestResultsDF, TestResultDF])
                     TestResultsDF.reset_index()
-                TestResultsDF.to_csv(csvPath, index = False)
+                TestResultsDF.to_csv(csvPath, index = False, encoding = 'utf-8')
         self.startThread(InputContent, ConversationName)
         self.thread.textReceived.connect(collectAnswers)
         self.InputArea.clear()
@@ -664,6 +681,8 @@ class MainWindow(QWidget):
         self.ConversationList.itemClicked.connect(self.LoadCurrentHistory)
         self.ConversationList.setContextMenuPolicy(Qt.CustomContextMenu)
         self.ConversationList.customContextMenuRequested.connect(self.ShowContextMenu)
+
+        self.Button_ClearConversations.clicked.connect(self.ClearConversations)
 
         self.Button_CreateConversation.clicked.connect(self.CreateConversation)
 
