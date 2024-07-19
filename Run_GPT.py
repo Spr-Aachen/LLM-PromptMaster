@@ -16,6 +16,52 @@ from QEasyWidgets.Utils import *
 from QEasyWidgets.QTasks import *
 from QEasyWidgets.WindowCustomizer import *
 
+from EVT_GUI.Functions import ParamsManager
+from Config import *
+
+##############################################################################################################################
+
+# Custom roles
+CustomRoles = {
+    "航班信息翻译员": """
+        ## Role:
+        航班信息翻译员
+        ## Profile:
+        - language: 中文
+        - description: 你是一个专门处理航班信息的翻译员，你的主要职责是将原始的航班信息翻译并整理为用户易读的格式。原始的机票信息结构是：多个航段组成的一张票据信息，票据会有一个总价格
+        ## Goals:
+        - 理解和翻译航班信息
+        - 按照规定的格式整理翻译后的航班信息
+        ## Constrains:
+        - 输出的航班信息只包含航班号（英文+需要翻译为中文名称）、航空公司（仅翻译为中文名称）、出发地、目的地、起飞机场（英文+需要翻译为中文名称）、落地机场（英文+需要翻译为中文名称）、起飞时间（格式为yyyy-MM-dd HH:mm:ss）、到达时间（格式为yyyy-MM-dd HH:mm:ss）、行李限额（需要翻译为中文解释）、改签费（即：更改航班费用）、退票费（即：取消退款费用）、误机费（即：未办理登记手续费用）、机票总价格（仅返回数字）、预订编码、机票号、出发城市代码、目的城市代码
+        - 所有的时间和日期信息需要按照用户指定的格式处理
+        - 所有的信息需要按照有序列表输出
+        - 机票总价格的格式如下：TOTAL代表机票总金额 CNY代表国际币种简称，后面的数字代表金额，最终期望显示为：机票总金额：金额，如果币种简称不符合币种要求，显示为：暂无
+        - 将机票信息转换成JSON数组格式。缺失的信息请在JSON中以null表示。JSON模板：{
+            "fightNumber": "航班号（英文+需要翻译为中文名称）",
+            "airway": "航空公司（仅翻译为中文名称）",
+            "fightDepartureCity": "出发地",
+            "fightFallCity": "目的地",
+            "fightDepartureAirport": "起飞机场（英文+需要翻译为中文名称）",
+            "fightFallAirport": "落地机场（英文+需要翻译为中文名称）",
+            "fightStatus": "航班状态",
+            "fightDepartureTime": "起飞时间（格式为yyyy-MM-dd HH:mm:ss）",
+            "fightFallTime": "到达时间（格式为yyyy-MM-dd HH:mm:ss）",
+            "baggageAllowance": "行李限额（需要翻译为中文解释）",
+            "rebookFee": "改签费（即：更改航班费用）",
+            "refundFee": "退票费（即：取消退款费用）",
+            "delayFee": "误机费（即：未办理登记手续费用）",
+            "flightPrice": "机票总价格（仅返回数字）",
+            "bookingCode": "预订编码",
+            "ticketNo": "机票号",
+            "fightDepartureCityCode": "出发城市代码",
+            "fightFallCityCode": "目的城市代码"
+        }
+        - 结果中仅包含JSON数组
+    """
+}
+
+##############################################################################################################################
 
 # Offline method to get available models for each url
 ModelDict = {
@@ -170,6 +216,7 @@ def updateModels(NewURL): # Should add request method in the future (see ref in 
         elif keywordURLs.index(keywordURL) == keywordURLs.__len__():
             raise Exception("URL not found, plz update ModelDict!")
 
+##############################################################################################################################
 
 class RequestThread(QThread):
     textReceived = Signal(str)
@@ -205,6 +252,7 @@ class RequestThread(QThread):
         )
         self.textReceived.emit(text)
 
+##############################################################################################################################
 
 class TestWindow(DialogBase):
     '''
@@ -280,46 +328,7 @@ class MainWindow(QWidget):
     '''
     Models = []
 
-    roles = {
-        "无": """
-        """,
-        "航班信息翻译员": """
-            ## Role:
-            航班信息翻译员
-            ## Profile:
-            - language: 中文
-            - description: 你是一个专门处理航班信息的翻译员，你的主要职责是将原始的航班信息翻译并整理为用户易读的格式。原始的机票信息结构是：多个航段组成的一张票据信息，票据会有一个总价格
-            ## Goals:
-            - 理解和翻译航班信息
-            - 按照规定的格式整理翻译后的航班信息
-            ## Constrains:
-            - 输出的航班信息只包含航班号（英文+需要翻译为中文名称）、航空公司（仅翻译为中文名称）、出发地、目的地、起飞机场（英文+需要翻译为中文名称）、落地机场（英文+需要翻译为中文名称）、起飞时间（格式为yyyy-MM-dd HH:mm:ss）、到达时间（格式为yyyy-MM-dd HH:mm:ss）、行李限额（需要翻译为中文解释）、改签费（即：更改航班费用）、退票费（即：取消退款费用）、误机费（即：未办理登记手续费用）、机票总价格（仅返回数字）、预订编码、机票号、出发城市代码、目的城市代码
-            - 所有的时间和日期信息需要按照用户指定的格式处理
-            - 所有的信息需要按照有序列表输出
-            - 机票总价格的格式如下：TOTAL代表机票总金额 CNY代表国际币种简称，后面的数字代表金额，最终期望显示为：机票总金额：金额，如果币种简称不符合币种要求，显示为：暂无
-            - 将机票信息转换成JSON数组格式。缺失的信息请在JSON中以null表示。JSON模板：{
-                "fightNumber": "航班号（英文+需要翻译为中文名称）",
-                "airway": "航空公司（仅翻译为中文名称）",
-                "fightDepartureCity": "出发地",
-                "fightFallCity": "目的地",
-                "fightDepartureAirport": "起飞机场（英文+需要翻译为中文名称）",
-                "fightFallAirport": "落地机场（英文+需要翻译为中文名称）",
-                "fightStatus": "航班状态",
-                "fightDepartureTime": "起飞时间（格式为yyyy-MM-dd HH:mm:ss）",
-                "fightFallTime": "到达时间（格式为yyyy-MM-dd HH:mm:ss）",
-                "baggageAllowance": "行李限额（需要翻译为中文解释）",
-                "rebookFee": "改签费（即：更改航班费用）",
-                "refundFee": "退票费（即：取消退款费用）",
-                "delayFee": "误机费（即：未办理登记手续费用）",
-                "flightPrice": "机票总价格（仅返回数字）",
-                "bookingCode": "预订编码",
-                "ticketNo": "机票号",
-                "fightDepartureCityCode": "出发城市代码",
-                "fightFallCityCode": "目的城市代码"
-            }
-            - 结果中仅包含JSON数组
-        """
-    }
+    roles = {"无": ""}
     MessagesDict = {}
 
     ConversationDir = './Conversations'
@@ -333,6 +342,8 @@ class MainWindow(QWidget):
         super().__init__()
 
         self.resize(900, 600)
+
+        self.roles.update(CustomRoles)
 
     def initUI(self):
         # Top area
@@ -395,6 +406,11 @@ class MainWindow(QWidget):
         self.ModelSelector.clear()
         self.ModelSelector.addItems(self.Models)
 
+    def removeConversationFiles(self, listItem: QListWidgetItem):
+        self.ConversationList.takeItem(self.ConversationList.row(listItem))
+        os.remove(Path(self.ConversationDir).joinpath(listItem.text() + '.txt').as_posix())
+        os.remove(Path(self.QuestionDir).joinpath(listItem.text() + '.txt').as_posix())
+
     def renameConversation(self):
         currentItem = self.ConversationList.currentItem()
         if currentItem is not None:
@@ -420,11 +436,8 @@ class MainWindow(QWidget):
                 QMessageBox.No
             )
             if confirm == QMessageBox.Yes:
-                row = self.ConversationList.row(currentItem)
-                self.ConversationList.takeItem(row)
+                self.removeConversationFiles(currentItem)
                 self.Browser.clear()
-                os.remove(Path(self.ConversationDir).joinpath(currentItem.text() + '.txt').as_posix())
-                os.remove(Path(self.QuestionDir).joinpath(currentItem.text() + '.txt').as_posix())
                 if self.ConversationList.count() > 0:
                     self.LoadCurrentHistory(self.ConversationList.currentItem()) #self.ConversationList.click(self.ConversationList.currentItem())
 
@@ -566,6 +579,10 @@ class MainWindow(QWidget):
             self.ConversationList.setEnabled(block)
             self.Button_ClearConversations.setEnabled(block)
             self.Button_CreateConversation.setEnabled(block)
+            self.Button_Load.setEnabled(block)
+            self.Button_Send.setEnabled(block)
+            self.Button_Test.setEnabled(block)
+            self.InputArea.blockKeyEnter(block)
         blockList(False)
         Messages = self.MessagesDict[ConversationName]
         if InputContent.strip().__len__() > 0:
@@ -588,12 +605,14 @@ class MainWindow(QWidget):
 
     def Query(self):
         InputContent = self.InputArea.toPlainText()
+        self.CreateConversation() if self.ConversationList.count() == 0 else None
         ConversationName = self.ConversationList.currentItem().text()
         self.startThread(InputContent, ConversationName)
         self.InputArea.clear()
 
     def QueryTest(self):
         InputContent = self.InputArea.toPlainText()
+        self.CreateConversation() if self.ConversationList.count() == 0 else None
         ConversationName = self.ConversationList.currentItem().text()
         TotalTestTimes, ok = QInputDialog.getText(self,
             'Set Testing Times',
@@ -643,6 +662,7 @@ class MainWindow(QWidget):
         self.InputArea.clear()
 
     def Main(self):
+        # Setup UI
         self.initUI()
 
         # Top area
