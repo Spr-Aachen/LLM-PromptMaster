@@ -57,6 +57,7 @@ CustomRoles = {
             "fightDepartureCityCode": "出发城市代码",
             "fightFallCityCode": "目的城市代码"
         }
+        - 每当出现信息缺失时请先检索一遍机票信息以尝试补全，确认缺失后再用null表示
         - 结果中仅包含JSON数组
     """
 }
@@ -485,7 +486,9 @@ class MainWindow(QWidget):
         self.InputArea.setText(Question)
 
     def ClearConversations(self):
-        self.ConversationList.clear()
+        listItems = [self.ConversationList.item(i) for i in range(self.ConversationList.count())]
+        for listItem in listItems:
+            self.removeConversationFiles(listItem)
 
     def ApplyRole(self):
         for ConversationName, Messages in self.MessagesDict.items():
@@ -609,6 +612,7 @@ class MainWindow(QWidget):
         ConversationName = self.ConversationList.currentItem().text()
         self.startThread(InputContent, ConversationName)
         self.InputArea.clear()
+        self.InputArea.setFocus()
 
     def QueryTest(self):
         InputContent = self.InputArea.toPlainText()
@@ -618,8 +622,14 @@ class MainWindow(QWidget):
             'Set Testing Times',
             'Enter testing times:'
         )
-        if ok and TotalTestTimes:
-            self.TotalTestTimes = int(TotalTestTimes)
+        if ok and TotalTestTimes.strip().__len__() > 0:
+            self.TotalTestTimes = int(TotalTestTimes.strip())
+            if self.TotalTestTimes <= 0:
+                MsgBox = QMessageBox()
+                MsgBox.setWindowTitle('Warning')
+                MsgBox.setText(f'Incorrect number!')
+                MsgBox.exec()
+                return
         else:
             return
         self.CurrentTestTime = 1
@@ -644,22 +654,25 @@ class MainWindow(QWidget):
                 # Save the test result
                 csvPath = './TestResult.csv'
                 TestResult = {
-                    'CodeInput': [Input],
-                    'Answer': [Answers[0]],
-                    'TestTimes': self.TotalTestTimes,
-                    'SimilarityMatrix': [similarity_matrix]
+                    'CodeInput (问题)': [Input],
+                    'Answer (第一次返回的结果)': [Answers[0]],
+                    'TestTimes (测试次数)': self.TotalTestTimes,
+                    'SimilarityMatrix (使用TF-IDF算法对测试次数内返回结果的相似性的计算)': [similarity_matrix]
                 }
                 TestResultDF = pandas.DataFrame(TestResult)
                 if Path(csvPath).exists():
                     TestResultsDF = pandas.read_csv(csvPath, encoding = 'utf-8')
                     TestResultsDF.drop_duplicates()
-                    TestResultsDF = TestResultsDF[TestResultsDF['CodeInput'] != Input]
+                    TestResultsDF = TestResultsDF[TestResultsDF['CodeInput (问题)'] != Input]
                     TestResultsDF = pandas.concat([TestResultsDF, TestResultDF])
                     TestResultsDF.reset_index()
+                else:
+                    TestResultsDF = TestResultDF
                 TestResultsDF.to_csv(csvPath, index = False, encoding = 'utf-8')
         self.startThread(InputContent, ConversationName)
         self.thread.textReceived.connect(collectAnswers)
         self.InputArea.clear()
+        self.InputArea.setFocus()
 
     def Main(self):
         # Setup UI
@@ -711,6 +724,9 @@ class MainWindow(QWidget):
 
         # Create a new conversation
         self.CreateConversation()
+
+        # Set the widget to be focused
+        self.InputArea.setFocus()
 
         # Show window
         self.show()
