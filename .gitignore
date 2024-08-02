@@ -1,5 +1,19 @@
 # 
 **/__pycache__/
+**/*.ipynb
+
+# 
+**/*.ui
+**/*.ts
+**/*.qm
+**/*.qrc
+**/*.png
+
+# 
+**/*venv/
+**/*.ico
+**/*MANIFEST.in
+**/*Setup.py
 
 #
-README.ipynb
+**/sql/

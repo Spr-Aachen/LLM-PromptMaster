@@ -4,11 +4,11 @@ from PySide6.QtCore import Qt, QObject, Signal, Slot
 from PySide6.QtCore import QCoreApplication as QCA
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import *
-
 from QEasyWidgets.Utils import *
 from QEasyWidgets.QFunctions import *
-from QEasyWidgets.WindowCustomizer import *
-from .components.Components import *
+
+from components.Components import *
+from windows.Windows import *
 
 ##############################################################################################################################
 

@@ -5,7 +5,7 @@ from PySide6.QtWidgets import QWidget
 from QEasyWidgets.ComponentsCustomizer import *
 from QEasyWidgets.Utils import *
 from QEasyWidgets.QFunctions import *
-from ..assets.Sources import *
+from assets.Sources import *
 
 ##############################################################################################################################
 
