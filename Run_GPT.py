@@ -270,31 +270,31 @@ class TestWindow(DialogBase):
         self.Label = QLabel()
         self.Label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        self.Input_FilePath = LineEditBase()
+        self.LineEdit_FilePath = LineEditBase()
 
-        self.Input_Column = LineEditBase()
+        self.LineEdit_Column = LineEditBase()
 
-        self.Input_Amount = LineEditBase()
+        self.LineEdit_Amount = LineEditBase()
 
-        self.Button_Confirm = QPushButton('Confirm', self)
+        self.Button_Confirm = QPushButton('Confirm')
 
-        self.Button_Cancel = QPushButton('Cancel', self)
+        self.Button_Cancel = QPushButton('Cancel')
 
         Layout = QGridLayout(self)
         Layout.addWidget(self.Label, 0, 0, 1, 2)
-        Layout.addWidget(self.Input_FilePath, 1, 0, 1, 2)
-        Layout.addWidget(self.Input_Column, 2, 0, 1, 2)
-        Layout.addWidget(self.Input_Amount, 3, 0, 1, 2)
+        Layout.addWidget(self.LineEdit_FilePath, 1, 0, 1, 2)
+        Layout.addWidget(self.LineEdit_Column, 2, 0, 1, 2)
+        Layout.addWidget(self.LineEdit_Amount, 3, 0, 1, 2)
         Layout.addWidget(self.Button_Confirm, 4, 0, 1, 1)
         Layout.addWidget(self.Button_Cancel, 4, 1, 1, 1)
         Layout.setRowStretch(0, 1)
 
     def LoadQuestions(self):
-        FilePath = self.Input_FilePath.text()
+        FilePath = self.LineEdit_FilePath.text()
         if Path(FilePath).exists():
-            excelDF = pandas.read_excel(FilePath, usecols = self.Input_Column.text().strip())
+            excelDF = pandas.read_excel(FilePath, usecols = self.LineEdit_Column.text().strip())
             self.QuestionList = excelDF.iloc[:, 0].to_list()
-        MaximumAmount = self.Input_Amount.text().strip()
+        MaximumAmount = self.LineEdit_Amount.text().strip()
         if MaximumAmount.__len__() > 0 and self.QuestionList.__len__() > int(MaximumAmount) > 0 :
             self.QuestionList = self.QuestionList[:int(MaximumAmount)]
 
@@ -303,17 +303,17 @@ class TestWindow(DialogBase):
 
         self.Label.setText("Plz provide ur excel file path and its column letter:")
 
-        self.Input_FilePath.SetFileDialog('SelectFile', '表格 (*.csv *.xlsx)')
-        self.Input_FilePath.setAcceptDrops(True)
-        self.Input_FilePath.setPlaceholderText("Please enter the excel file path to load")
+        self.LineEdit_FilePath.SetFileDialog('SelectFile', '表格 (*.csv *.xlsx)')
+        self.LineEdit_FilePath.setAcceptDrops(True)
+        self.LineEdit_FilePath.setPlaceholderText("Please enter the excel file path to load")
 
-        self.Input_Column.RemoveFileDialogButton()
-        self.Input_Column.setAcceptDrops(False)
-        self.Input_Column.setPlaceholderText("Please enter the column where questions are located")
+        self.LineEdit_Column.RemoveFileDialogButton()
+        self.LineEdit_Column.setAcceptDrops(False)
+        self.LineEdit_Column.setPlaceholderText("Please enter the column where questions are located")
 
-        self.Input_Amount.RemoveFileDialogButton()
-        self.Input_Amount.setAcceptDrops(False)
-        self.Input_Amount.setPlaceholderText("Please enter the maximum amount of questions")
+        self.LineEdit_Amount.RemoveFileDialogButton()
+        self.LineEdit_Amount.setAcceptDrops(False)
+        self.LineEdit_Amount.setPlaceholderText("Please enter the maximum amount of questions")
 
         self.Button_Confirm.clicked.connect(self.LoadQuestions, Qt.ConnectionType.QueuedConnection)
         self.Button_Confirm.clicked.connect(self.close, Qt.ConnectionType.QueuedConnection)
@@ -348,33 +348,33 @@ class MainWindow(QWidget):
 
     def initUI(self):
         # Top area
-        self.Input_URL = QLineEdit(self)
+        self.LineEdit_URL = QLineEdit()
 
-        self.Input_APIKey = QLineEdit(self)
+        self.LineEdit_APIKey = QLineEdit()
 
-        self.Input_APPID = QLineEdit(self)
+        self.LineEdit_APPID = QLineEdit()
 
-        self.ModelSelector = QComboBox(self)
+        self.ComboBox_Model = QComboBox()
 
-        self.RoleSelector = QComboBox(self)
+        self.ComboBox_Role = QComboBox()
 
         Layout_Top = QGridLayout()
-        Layout_Top.addWidget(self.Input_URL, 0, 1, 1, 2)
-        Layout_Top.addWidget(self.Input_APIKey, 0, 3, 1, 2)
-        Layout_Top.addWidget(self.Input_APPID, 0, 5, 1, 2)
-        Layout_Top.addWidget(self.ModelSelector, 1, 1, 1, 3)
-        Layout_Top.addWidget(self.RoleSelector, 1, 4, 1, 3)
+        Layout_Top.addWidget(self.LineEdit_URL, 0, 1, 1, 2)
+        Layout_Top.addWidget(self.LineEdit_APIKey, 0, 3, 1, 2)
+        Layout_Top.addWidget(self.LineEdit_APPID, 0, 5, 1, 2)
+        Layout_Top.addWidget(self.ComboBox_Model, 1, 1, 1, 3)
+        Layout_Top.addWidget(self.ComboBox_Role, 1, 4, 1, 3)
 
         # Right area
-        self.Browser = QTextBrowser(self)
+        self.Browser = QTextBrowser()
 
-        self.InputArea = TextEditBase(self)
+        self.InputArea = TextEditBase()
 
-        self.Button_Load = QPushButton('Load Questions from File', self)
+        self.Button_Load = QPushButton('Load Questions from File')
 
-        self.Button_Send = QPushButton('Send', self)
+        self.Button_Send = QPushButton('Send')
     
-        self.Button_Test = QPushButton('Test', self)
+        self.Button_Test = QPushButton('Test')
 
         Layout_Right = QGridLayout()
         Layout_Right.addWidget(self.Browser, 0, 0, 5, 2)
@@ -384,11 +384,11 @@ class MainWindow(QWidget):
         Layout_Right.addWidget(self.Button_Test, 8, 1, 1, 1)
 
         # Left area
-        self.ConversationList = QListWidget(self)
+        self.ConversationList = QListWidget()
 
-        self.Button_ClearConversations = QPushButton('Clear All', self)
+        self.Button_ClearConversations = QPushButton('Clear All')
 
-        self.Button_CreateConversation = QPushButton('New Conversation', self)
+        self.Button_CreateConversation = QPushButton('New Conversation')
 
         Layout_Left = QVBoxLayout()
         Layout_Left.addWidget(self.ConversationList)
@@ -403,9 +403,9 @@ class MainWindow(QWidget):
         Layout.setColumnStretch(1, 1)
 
     def UpdateModels(self):
-        self.Models = updateModels(self.Input_URL.text())
-        self.ModelSelector.clear()
-        self.ModelSelector.addItems(self.Models)
+        self.Models = updateModels(self.LineEdit_URL.text())
+        self.ComboBox_Model.clear()
+        self.ComboBox_Model.addItems(self.Models)
 
     def removeConversationFiles(self, listItem: QListWidgetItem):
         self.ConversationList.takeItem(self.ConversationList.row(listItem))
@@ -422,10 +422,10 @@ class MainWindow(QWidget):
             )
             if ok and new_name:
                 self.ConversationFilePath = Path(self.ConversationDir).joinpath(f"{new_name}.txt").as_posix()
-                os.rename(Path(self.ConversationDir).joinpath(f"{old_name}.txt"), self.ConversationFilePath)
+                os.rename(Path(self.ConversationDir).joinpath(f"{old_name}.txt").ConversationFilePath)
                 currentItem.setText(new_name)
                 self.QuestionFilePath = Path(self.QuestionDir).joinpath(f"{new_name}.txt").as_posix()
-                os.rename(Path(self.QuestionDir).joinpath(f"{old_name}.txt"), self.QuestionFilePath)
+                os.rename(Path(self.QuestionDir).joinpath(f"{old_name}.txt").QuestionFilePath)
 
     def deleteConversation(self):
         currentItem = self.ConversationList.currentItem()
@@ -444,9 +444,9 @@ class MainWindow(QWidget):
 
     def ShowContextMenu(self, position):
         context_menu = QMenu(self)
-        delete_action = QAction("Delete Conversation", self)
+        delete_action = QAction("Delete Conversation")
         delete_action.triggered.connect(self.deleteConversation)
-        rename_action = QAction("Rename Conversation", self)
+        rename_action = QAction("Rename Conversation")
         rename_action.triggered.connect(self.renameConversation)
         context_menu.addActions([delete_action, rename_action])
         context_menu.exec(self.ConversationList.mapToGlobal(position))
@@ -495,7 +495,7 @@ class MainWindow(QWidget):
             Messages.append(
                 {
                     'role': 'assistant',
-                    'content': self.roles[self.RoleSelector.currentText()]
+                    'content': self.roles[self.ComboBox_Role.currentText()]
                 }
             )
             self.MessagesDict[ConversationName] = Messages
@@ -596,10 +596,10 @@ class MainWindow(QWidget):
             self.MessagesDict[ConversationName] = Messages
             self.updateRecord(ConversationName)
             self.thread = RequestThread(
-                URL = self.Input_URL.text(),
-                APP_ID = self.Input_APPID.text(),
-                API_key = self.Input_APIKey.text(),
-                Model = self.ModelSelector.currentText(),
+                URL = self.LineEdit_URL.text(),
+                APP_ID = self.LineEdit_APPID.text(),
+                API_key = self.LineEdit_APIKey.text(),
+                Model = self.ComboBox_Model.currentText(),
                 Messages = Messages
             )
             self.thread.textReceived.connect(lambda text: self.recieveAnswer(text, ConversationName))
@@ -633,13 +633,13 @@ class MainWindow(QWidget):
         else:
             return
         self.CurrentTestTime = 1
-        print('Current test time:', self.CurrentTestTime)
+        print('Current test time:'.CurrentTestTime)
         Input = self.InputArea.toPlainText()
         Answers = []
         def collectAnswers(recievedText):
             self.CurrentTestTime += 1
             if self.CurrentTestTime <= self.TotalTestTimes:
-                print('Current test time:', self.CurrentTestTime)
+                print('Current test time:'.CurrentTestTime)
                 Answers.append(recievedText)
                 self.startThread(InputContent, ConversationName)
                 self.thread.textReceived.connect(collectAnswers)
@@ -678,21 +678,55 @@ class MainWindow(QWidget):
         # Setup UI
         self.initUI()
 
+        # Chat - ParamsManager
+        Path_Config_Chat = NormPath(Path(ConfigDir).joinpath('Config_Chat.ini'))
+        ParamsManager_Chat = ParamsManager(Path_Config_Chat)
+
         # Top area
-        self.Input_URL.textChanged.connect(self.UpdateModels)
-        self.Input_URL.setPlaceholderText("Please enter the URL")
-        self.Input_URL.setText("https://gptgateway-uat.transsion.com")
+        self.LineEdit_URL.textChanged.connect(self.UpdateModels)
+        ParamsManager_Chat.SetParam(
+            Widget = self.LineEdit_URL,
+            Section = 'Input Params',
+            Option = 'URL',
+            DefaultValue = '',
+            SetPlaceholderText = True,
+            PlaceholderText = "Please enter the URL"
+        )
 
-        self.Input_APIKey.setPlaceholderText("Please enter your API key")
-        self.Input_APIKey.setText("tITFPtSs9lLXD4a0xuLlGPTrwPNftZ0g")
+        ParamsManager_Chat.SetParam(
+            Widget = self.LineEdit_APIKey,
+            Section = 'Input Params',
+            Option = 'API key',
+            DefaultValue = '',
+            SetPlaceholderText = True,
+            PlaceholderText = "Please enter your API key"
+        )
 
-        self.Input_APPID.setPlaceholderText("Please enter your APP ID (Leave this empty if u don't have any)")
-        self.Input_APPID.setText("c_MjIxMTI1MDAxbQ")
+        ParamsManager_Chat.SetParam(
+            Widget = self.LineEdit_APPID,
+            Section = 'Input Params',
+            Option = 'APP ID',
+            DefaultValue = '',
+            SetPlaceholderText = True,
+            PlaceholderText = "Please enter your APP ID (Leave this empty if u don't have any)"
+        )
 
-        self.ModelSelector.setCurrentIndex(self.ModelSelector.count() - 1) # Select the last index as default
+        self.ComboBox_Model.addItems(self.Models)
+        ParamsManager_Chat.SetParam(
+            Widget = self.ComboBox_Model,
+            Section = 'Input Params',
+            Option = 'Model'
+        )
+        self.ComboBox_Model.setCurrentIndex(self.ComboBox_Model.count() - 1) # Select the last index as default
 
-        self.RoleSelector.addItems(self.roles.keys())
-        self.RoleSelector.currentIndexChanged.connect(self.ApplyRole)
+        self.ComboBox_Role.addItems(list(self.roles.keys()))
+        self.ComboBox_Role.currentIndexChanged.connect(self.ApplyRole)
+        ParamsManager_Chat.SetParam(
+            Widget = self.ComboBox_Role,
+            Section = 'Input Params',
+            Option = 'Role',
+            DefaultValue = "无"
+        )
 
         # Right area
         self.InputArea.textChanged.connect(self.saveQuestion)
