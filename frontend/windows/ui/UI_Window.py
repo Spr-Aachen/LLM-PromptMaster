@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 
+from PySide6.QtCore import QSize
 from PySide6.QtWidgets import *
-from QEasyWidgets.ComponentsCustomizer import *
+
+from components.Components import *
 
 
 class Ui_Window(object):
@@ -136,33 +138,107 @@ class Ui_Window(object):
         self.horizontalLayout_30.addWidget(self.Frame_Top)
 
         # Top area
-        self.ComboBox_Protocol = QComboBox()
+        self.Label_Protocal = LabelBase()
+        self.ComboBox_Protocol = ComboBoxBase()
+        self.ComboBox_Protocol.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        Layout_Protocal = QHBoxLayout()
+        Layout_Protocal.addWidget(self.Label_Protocal)
+        Layout_Protocal.addWidget(self.ComboBox_Protocol)
 
-        self.LineEdit_ip = QLineEdit()
+        self.Label_ip = LabelBase()
+        self.LineEdit_ip = LineEditBase()
+        self.LineEdit_ip.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        Layout_ip = QHBoxLayout()
+        Layout_ip.addWidget(self.Label_ip)
+        Layout_ip.addWidget(self.LineEdit_ip)
 
-        self.SpinBox_port = QSpinBox()
+        self.Label_port = LabelBase()
+        self.SpinBox_port = SpinBoxBase()
+        self.SpinBox_port.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        Layout_port = QHBoxLayout()
+        Layout_port.addWidget(self.Label_port)
+        Layout_port.addWidget(self.SpinBox_port)
 
-        self.ComboBox_Model = QComboBox()
+        self.Label_Type = LabelBase()
+        self.ComboBox_Type = ComboBoxBase()
+        self.ComboBox_Type.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        Layout_Type = QHBoxLayout()
+        Layout_Type.addWidget(self.Label_Type)
+        Layout_Type.addWidget(self.ComboBox_Type)
 
-        self.ComboBox_Type = QComboBox()
+        self.Label_Model = LabelBase()
+        self.ComboBox_Model = ComboBoxBase()
+        self.ComboBox_Model.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        Layout_Model = QHBoxLayout()
+        Layout_Model.addWidget(self.Label_Model)
+        Layout_Model.addWidget(self.ComboBox_Model)
+
+        self.Label_Role = LabelBase()
+        self.ComboBox_Role = ComboBoxBase()
+        self.ComboBox_Role.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.Button_ManageRole = ButtonBase()
+        self.Button_ManageRole.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        Layout_Role = QHBoxLayout()
+        Layout_Role.addWidget(self.Label_Role)
+        Layout_Role.addWidget(self.ComboBox_Role)
+        Layout_Role.addWidget(self.Button_ManageRole)
 
         Layout_Top = QGridLayout()
-        Layout_Top.addWidget(self.ComboBox_Protocol, 0, 1, 1, 2)
-        Layout_Top.addWidget(self.LineEdit_ip, 0, 3, 1, 2)
-        Layout_Top.addWidget(self.SpinBox_port, 0, 5, 1, 2)
-        Layout_Top.addWidget(self.ComboBox_Model, 1, 1, 1, 3)
-        Layout_Top.addWidget(self.ComboBox_Type, 1, 4, 1, 3)
+        Layout_Top.addLayout(Layout_Protocal, 0, 0)
+        Layout_Top.addLayout(Layout_ip, 0, 1)
+        Layout_Top.addLayout(Layout_port, 0, 2)
+        Layout_Top.addLayout(Layout_Type, 1, 0)
+        Layout_Top.addLayout(Layout_Model, 1, 1)
+        Layout_Top.addLayout(Layout_Role, 1, 2)
+        Layout_Top.setContentsMargins(0, 0, 0, 0)
+        Layout_Top.setSpacing(12)
 
         # Right area
         self.TextBrowser = QTextBrowser()
 
         self.TextEdit_Input = TextEditBase()
 
-        self.Button_Load = QPushButton('Load Questions from File')
+        self.Button_Load = QPushButton()
+        self.Button_Load.setStyleSheet(u"QPushButton {\n"
+"	text-align: center;\n"
+"	font-size: 12px;\n"
+"	background-color: transparent;\n"
+"	padding: 6.6px;\n"
+"	border-width: 1.2px;\n"
+"	border-style: solid;\n"
+"	border-color: rgb(90, 90, 90);\n"
+"}\n"
+"QPushButton:hover {\n"
+"	border-color: rgb(120, 120, 120);\n"
+"}")
 
-        self.Button_Send = QPushButton('Send')
+        self.Button_Send = QPushButton()
+        self.Button_Send.setStyleSheet(u"QPushButton {\n"
+"	text-align: center;\n"
+"	font-size: 12px;\n"
+"	background-color: transparent;\n"
+"	padding: 6.6px;\n"
+"	border-width: 1.2px;\n"
+"	border-style: solid;\n"
+"	border-color: rgb(90, 90, 90);\n"
+"}\n"
+"QPushButton:hover {\n"
+"	border-color: rgb(120, 120, 120);\n"
+"}")
     
-        self.Button_Test = QPushButton('Test')
+        self.Button_Test = QPushButton()
+        self.Button_Test.setStyleSheet(u"QPushButton {\n"
+"	text-align: center;\n"
+"	font-size: 12px;\n"
+"	background-color: transparent;\n"
+"	padding: 6.6px;\n"
+"	border-width: 1.2px;\n"
+"	border-style: solid;\n"
+"	border-color: rgb(90, 90, 90);\n"
+"}\n"
+"QPushButton:hover {\n"
+"	border-color: rgb(120, 120, 120);\n"
+"}")
 
         Layout_Right = QGridLayout()
         Layout_Right.addWidget(self.TextBrowser, 0, 0, 5, 2)
@@ -170,18 +246,46 @@ class Ui_Window(object):
         Layout_Right.addWidget(self.Button_Load, 7, 0, 1, 2)
         Layout_Right.addWidget(self.Button_Send, 8, 0, 1, 1)
         Layout_Right.addWidget(self.Button_Test, 8, 1, 1, 1)
+        Layout_Right.setContentsMargins(0, 0, 0, 0)
+        Layout_Right.setSpacing(12)
 
         # Left area
         self.ListWidget_Conversation = QListWidget()
 
-        self.Button_ClearConversations = QPushButton('Clear All')
+        self.Button_ClearConversations = QPushButton()
+        self.Button_ClearConversations.setStyleSheet(u"QPushButton {\n"
+"	text-align: center;\n"
+"	font-size: 12px;\n"
+"	background-color: transparent;\n"
+"	padding: 6.6px;\n"
+"	border-width: 1.2px;\n"
+"	border-style: solid;\n"
+"	border-color: rgb(90, 90, 90);\n"
+"}\n"
+"QPushButton:hover {\n"
+"	border-color: rgb(120, 120, 120);\n"
+"}")
 
-        self.Button_CreateConversation = QPushButton('New Conversation')
+        self.Button_CreateConversation = QPushButton()
+        self.Button_CreateConversation.setStyleSheet(u"QPushButton {\n"
+"	text-align: center;\n"
+"	font-size: 12px;\n"
+"	background-color: transparent;\n"
+"	padding: 6.6px;\n"
+"	border-width: 1.2px;\n"
+"	border-style: solid;\n"
+"	border-color: rgb(90, 90, 90);\n"
+"}\n"
+"QPushButton:hover {\n"
+"	border-color: rgb(120, 120, 120);\n"
+"}")
 
         Layout_Left = QVBoxLayout()
         Layout_Left.addWidget(self.ListWidget_Conversation)
         Layout_Left.addWidget(self.Button_ClearConversations)
         Layout_Left.addWidget(self.Button_CreateConversation)
+        Layout_Left.setContentsMargins(0, 0, 0, 0)
+        Layout_Left.setSpacing(12)
 
         # Combine layouts to ContentWidget
         self.Content = QFrame()
@@ -190,6 +294,8 @@ class Ui_Window(object):
         ContentLayout.addLayout(Layout_Left, 1, 0, 4, 1)
         ContentLayout.addLayout(Layout_Right, 1, 1, 4, 3)
         ContentLayout.setColumnStretch(1, 1)
+        ContentLayout.setContentsMargins(12, 12, 12, 12)
+        ContentLayout.setSpacing(12)
 
         # Combine ContentWidget&TitleBar to MainWindow
         Layout = QGridLayout(Window)

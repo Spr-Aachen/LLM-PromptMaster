@@ -1,26 +1,30 @@
+import sys
 from pathlib import Path
-from QEasyWidgets.Utils import *
+from QEasyWidgets import QFunctions as QFunc
 
 ##############################################################################################################################
 
 # Check whether python file is compiled
-_, IsFileCompiled = GetFileInfo()
+_, IsFileCompiled = QFunc.GetFileInfo()
 
 # Get current directory
-CurrentDir = GetBaseDir(__file__ if IsFileCompiled == False else sys.executable)
+CurrentDir = QFunc.GetBaseDir(__file__ if IsFileCompiled == False else sys.executable)
 
 # Set root directory
 RootDir = Path(CurrentDir).parent.as_posix()
 
+# Set directory to store prompts
+PromptDir = QFunc.NormPath(Path(RootDir).joinpath('Prompts'))
+
 # Set directory to store conversations
-ConversationDir = NormPath(Path(RootDir).joinpath('Conversations'))
+ConversationDir = QFunc.NormPath(Path(RootDir).joinpath('Conversations'))
 
 # Set directory to store questions
-QuestionDir = NormPath(Path(RootDir).joinpath('Questions'))
+QuestionDir = QFunc.NormPath(Path(RootDir).joinpath('Questions'))
 
 # Set directory to store client config
-ConfigDir = NormPath(Path(RootDir).joinpath('Config'))
+ConfigDir = QFunc.NormPath(Path(RootDir).joinpath('Config'))
 # Set path of client config
-ConfigPath = NormPath(Path(RootDir).joinpath('Config.ini'))
+ConfigPath = QFunc.NormPath(Path(RootDir).joinpath('Config.ini'))
 
 ##############################################################################################################################
