@@ -46,7 +46,7 @@ class PromptWindow(DialogBase):
         Layout_Buttons.addWidget(self.Button_CreatePrompt)
         Layout_Buttons.addWidget(self.Button_DeletePrompt)
 
-        self.ListWidget = QListWidget()
+        self.ListWidget = ListBase()
 
         Layout_Left = QVBoxLayout()
         Layout_Left.addLayout(Layout_Buttons)
@@ -68,6 +68,23 @@ class PromptWindow(DialogBase):
         Layout.setContentsMargins(12, 12, 12, 12)
         Layout.setSpacing(12)
 
+    def LoadPromptList(self):
+        # Check if the prompt directory exists
+        if not os.path.exists(self.PromptDir):
+            os.makedirs(self.PromptDir)
+        # Initialize roles and add prompt to listwidget
+        self.ListWidget.clear()
+        for HistoryFileName in os.listdir(self.PromptDir):
+            if HistoryFileName.endswith('.txt'):
+                HistoryFilePath = Path(self.PromptDir).joinpath(HistoryFileName).as_posix()
+                if os.path.getsize(HistoryFilePath) == 0:
+                    os.remove(HistoryFilePath)
+                    continue
+                with open(HistoryFilePath, 'r', encoding = 'utf-8') as f:
+                    Prompt = f.read()
+                self.PromptDict[HistoryFileName[:-4]] = Prompt # Remove the .txt extension
+                self.ListWidget.addItem(HistoryFileName[:-4])
+                
     def loadCurrentPrompt(self, item: QListWidgetItem):
         # Load a conversation from a txt file and display it in the browser
         self.PromptFilePath = Path(self.PromptDir).joinpath(item.text() + '.txt').as_posix()
@@ -142,20 +159,6 @@ class PromptWindow(DialogBase):
         rename_action.triggered.connect(self.renamePrompt)
         context_menu.addActions([delete_action, rename_action])
         context_menu.exec(self.ListWidget.mapToGlobal(position))
-
-    def LoadPromptList(self):
-        # Check if the prompt directory exists
-        if not os.path.exists(self.PromptDir):
-            os.makedirs(self.PromptDir)
-        # Remove empty prompt and add the rest to history list
-        self.ListWidget.clear()
-        for HistoryFileName in os.listdir(self.PromptDir):
-            if HistoryFileName.endswith('.txt'):
-                HistoryFilePath = Path(self.PromptDir).joinpath(HistoryFileName).as_posix()
-                if os.path.getsize(HistoryFilePath) == 0:
-                    os.remove(HistoryFilePath)
-                    continue
-                self.ListWidget.addItem(HistoryFileName[:-4]) # Remove the .txt extension
 
     def savePrompt(self, Prompt: str):
         if self.ListWidget.count() == 0:

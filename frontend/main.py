@@ -26,11 +26,12 @@ def BuildMessageMarkdown(messages: list[dict]):
         content = str(message['content']).strip()
         if len(content) == 0:
             continue
+        content = QFunc.ToMarkdown(content)
         if role == 'user':
-            markdown += f"**Q**: {content}\n\n\n"
+            markdown += f"**Q**:\n\n{content}\n\n\n"
         if role == 'assistant':
-            markdown += f"**A**: {content}\n\n"
-            markdown += "---------------------------------------\n\n"
+            markdown += f"**A**:\n\n{content}\n\n\n"
+            markdown += "---------------------------------------\n\n\n"
     return markdown
 
 
@@ -66,12 +67,10 @@ def chatRequest(
 
     # gpt/智能体接口请求
     if type == 'gpt':
-        type = f"{type}?model={'gpt-4o' if model is None else model}"
-    if testtimes is not None:
-        assert testtimes > 1, "testtimes must be greater than 1"
-        URL = f"{protocol}://{ip}:{port}/{type}?testtimes={testtimes}"
-    else:
-        URL = f"{protocol}://{ip}:{port}/{type}"
+        query = f"model={'gpt-4o' if model is None else model}{f'&testtimes={testtimes}' if testtimes is not None else ''}"
+    if type == 'assistant':
+        query = f"testtimes={testtimes}" if testtimes is not None else ""
+    URL = f"{protocol}://{ip}:{port}/{type}{f'?{query}' if len(query) > 0 else ''}"
     Headers = {
         'Authorization': oauth_token
     }
@@ -150,7 +149,7 @@ class RequestThread(QThread):
             options = self.options,
             testtimes = self.testtimes
         )
-        self.textReceived.emit(result if statuscode == 200 else "请求失败")
+        self.textReceived.emit(str(result) if statuscode == 200 else "请求失败")
 
 ##############################################################################################################################
 
@@ -173,7 +172,7 @@ class MainWindow(Window_MainWindow):
         # Check if the prompt directory exists
         if not os.path.exists(PromptDir):
             os.makedirs(PromptDir)
-        # Remove empty prompt and add the rest to history list
+        # Initialize roles and add prompt to combobox
         for HistoryFileName in os.listdir(PromptDir):
             if HistoryFileName.endswith('.txt'):
                 HistoryFilePath = Path(PromptDir).joinpath(HistoryFileName).as_posix()
@@ -188,8 +187,10 @@ class MainWindow(Window_MainWindow):
         self.ui.ComboBox_Role.addItems(list(self.roles.keys()))
 
     def applyRole(self):
-        if self.ui.ComboBox_Role.count() == 0:
+        '''
+        if self.ui.ComboBox_Role.count() != len(self.roles.keys()):
             return
+        '''
         for ConversationName, Messages in self.MessagesDict.items():
             Messages.append(
                 {
@@ -208,6 +209,28 @@ class MainWindow(Window_MainWindow):
         self.ui.ComboBox_Role.clear()
         self.ui.ComboBox_Role.addItems(list(self.roles.keys()))
 
+    def LoadHistories(self):
+        # Check if the conversations directory exists
+        if not os.path.exists(ConversationDir):
+            os.makedirs(ConversationDir)
+        # Check if the questions directory exists
+        if not os.path.exists(QuestionDir):
+            os.makedirs(QuestionDir)
+        # Initialize MessagesDict and add conversations&questions to listwidget
+        self.ui.ListWidget_Conversation.clear()
+        for HistoryFileName in os.listdir(ConversationDir):
+            if HistoryFileName.endswith('.txt'):
+                ConversationFilePath = Path(ConversationDir).joinpath(HistoryFileName).as_posix()
+                QuestionFilePath = Path(QuestionDir).joinpath(HistoryFileName).as_posix()
+                if os.path.getsize(ConversationFilePath) == 0:
+                    os.remove(ConversationFilePath)
+                    os.remove(QuestionFilePath) if Path(QuestionFilePath).exists() else None
+                    continue
+                with open(ConversationFilePath, 'r', encoding = 'utf-8') as f:
+                    Messages = [json.loads(Message) for Message in f.readlines()]
+                self.MessagesDict[HistoryFileName[:-4]] = Messages # Remove the .txt extension
+                self.ui.ListWidget_Conversation.addItem(HistoryFileName[:-4])
+
     def loadCurrentHistory(self, item: QListWidgetItem):
         # Load a conversation from a txt file and display it in the browser
         self.ConversationFilePath = Path(ConversationDir).joinpath(item.text() + '.txt').as_posix()
@@ -215,7 +238,7 @@ class MainWindow(Window_MainWindow):
             Messages = [json.loads(line) for line in f]
         # Build&Set Markdown
         markdown = BuildMessageMarkdown(Messages)
-        self.ui.TextBrowser.setText(markdown) #self.ui.TextBrowser.setMarkdown(markdown)
+        self.ui.TextBrowser.setMarkdown(markdown)
         # Load a question from the txt file and display it in the input area
         self.QuestionFilePath = Path(QuestionDir).joinpath(item.text() + '.txt').as_posix()
         with open(self.QuestionFilePath, 'r', encoding = 'utf-8') as f:
@@ -301,25 +324,6 @@ class MainWindow(Window_MainWindow):
         context_menu.addActions([delete_action, rename_action])
         context_menu.exec(self.ui.ListWidget_Conversation.mapToGlobal(position))
 
-    def LoadConversationList(self):
-        # Check if the conversations directory exists
-        if not os.path.exists(ConversationDir):
-            os.makedirs(ConversationDir)
-        # Check if the questions directory exists
-        if not os.path.exists(QuestionDir):
-            os.makedirs(QuestionDir)
-        # Remove empty conversations(&questions) and add the rest to history list
-        self.ui.ListWidget_Conversation.clear()
-        for HistoryFileName in os.listdir(ConversationDir):
-            if HistoryFileName.endswith('.txt'):
-                HistoryFilePath = Path(ConversationDir).joinpath(HistoryFileName).as_posix()
-                QuestionFilePath = Path(QuestionDir).joinpath(HistoryFileName).as_posix()
-                if os.path.getsize(HistoryFilePath) == 0:
-                    os.remove(HistoryFilePath)
-                    os.remove(QuestionFilePath) if Path(QuestionFilePath).exists() else None
-                    continue
-                self.ui.ListWidget_Conversation.addItem(HistoryFileName[:-4]) # Remove the .txt extension
-
     def ClearConversations(self):
         listItems = [self.ui.ListWidget_Conversation.item(i) for i in range(self.ui.ListWidget_Conversation.count())]
         for listItem in listItems:
@@ -339,20 +343,11 @@ class MainWindow(Window_MainWindow):
             QuestionStr = Question.strip()
             f.write(QuestionStr)
 
-    def LoadQuestions(self):
-        ChildWindow_Test = TestWindow(self)
-        ChildWindow_Test.exec()
-        Questions =  ChildWindow_Test.QuestionList
-        for Question in Questions:
-            self.createConversation()
-            self.ui.TextEdit_Input.setText(Question)
-            #self.Query()
-
     def updateRecord(self, ConversationName):
         Messages = self.MessagesDict[ConversationName]
         # Build&Set Markdown
         markdown = BuildMessageMarkdown(Messages)
-        self.ui.TextBrowser.setText(markdown) if self.ui.ListWidget_Conversation.currentItem().text() == ConversationName else None #self.ui.TextBrowser.setMarkdown(markdown)
+        self.ui.TextBrowser.setMarkdown(markdown) if self.ui.ListWidget_Conversation.currentItem().text() == ConversationName else None
         # Move the scrollbar to the bottom
         cursor = self.ui.TextBrowser.textCursor()
         cursor.movePosition(QTextCursor.End)
@@ -371,8 +366,15 @@ class MainWindow(Window_MainWindow):
         self.MessagesDict[ConversationName] = Messages
         self.updateRecord(ConversationName)
 
-    def startThread(self, InputContent, ConversationName, TestTimes = None):
+    def startThread(self, InputContent: str, ConversationName: str, TestTimes: Optional[int] = None):
         def blockList(block: bool):
+            self.ui.ComboBox_Protocol.setEnabled(block)
+            self.ui.LineEdit_ip.setEnabled(block)
+            self.ui.SpinBox_port.setEnabled(block)
+            self.ui.ComboBox_Type.setEnabled(block)
+            self.ui.ComboBox_Model.setEnabled(block)
+            self.ui.ComboBox_Role.setEnabled(block)
+            self.ui.Button_ManageRole.setEnabled(block)
             self.ui.ListWidget_Conversation.setEnabled(block)
             self.ui.Button_ClearConversations.setEnabled(block)
             self.ui.Button_CreateConversation.setEnabled(block)
@@ -429,9 +431,17 @@ class MainWindow(Window_MainWindow):
                 return
         else:
             return
-        self.startThread(InputContent, ConversationName, TotalTestTimes)
+        self.startThread(InputContent, ConversationName, int(TotalTestTimes))
         self.ui.TextEdit_Input.clear()
         self.ui.TextEdit_Input.setFocus()
+
+    def LoadQuestions(self):
+        ChildWindow_Test = TestWindow(self)
+        ChildWindow_Test.exec()
+        Questions =  ChildWindow_Test.QuestionList
+        for Question in Questions:
+            self.createConversation()
+            self.ui.TextEdit_Input.setText(Question)
 
     def ExitRequest(self):
         exitRequest(
@@ -530,7 +540,7 @@ class MainWindow(Window_MainWindow):
 
         self.ui.Label_Role.setText("角色")
         self.ui.ComboBox_Role.addItems(list(self.roles.keys()))
-        self.ui.ComboBox_Role.currentIndexChanged.connect(self.applyRole)
+        self.ui.ComboBox_Role.activated.connect(self.applyRole)
         ParamsManager_Chat.SetParam(
             Widget = self.ui.ComboBox_Role,
             Section = 'Input Params',
@@ -552,13 +562,13 @@ class MainWindow(Window_MainWindow):
             """
         )
 
-        self.ui.Button_Load.setText('Load Questions from File')
+        self.ui.Button_Load.setText('从文件导入问题')
         self.ui.Button_Load.clicked.connect(self.LoadQuestions)
 
-        self.ui.Button_Send.setText('Send')
+        self.ui.Button_Send.setText('发送')
         self.ui.Button_Send.clicked.connect(self.Query)
 
-        self.ui.Button_Test.setText('Test')
+        self.ui.Button_Test.setText('测试')
         self.ui.Button_Test.clicked.connect(self.QueryTest)
 
         # Left area
@@ -566,18 +576,17 @@ class MainWindow(Window_MainWindow):
         self.ui.ListWidget_Conversation.setContextMenuPolicy(Qt.CustomContextMenu)
         self.ui.ListWidget_Conversation.customContextMenuRequested.connect(self.ShowContextMenu)
 
-        self.ui.Button_ClearConversations.setText('Clear Conversations')
+        self.ui.Button_ClearConversations.setText('清空对话')
         self.ui.Button_ClearConversations.clicked.connect(self.ClearConversations)
 
-        self.ui.Button_CreateConversation.setText('Create Conversation')
+        self.ui.Button_CreateConversation.setText('创建对话')
         self.ui.Button_CreateConversation.clicked.connect(self.createConversation)
 
         # Load roles
         self.loadRole()
-        print(self.roles)
 
         # Load histories
-        self.LoadConversationList()
+        self.LoadHistories()
 
         # Create a new conversation
         self.createConversation()

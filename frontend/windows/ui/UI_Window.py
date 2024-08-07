@@ -194,7 +194,7 @@ class Ui_Window(object):
         Layout_Top.setSpacing(12)
 
         # Right area
-        self.TextBrowser = QTextBrowser()
+        self.TextBrowser = TextBrowserBase()
 
         self.TextEdit_Input = TextEditBase()
 
@@ -250,7 +250,7 @@ class Ui_Window(object):
         Layout_Right.setSpacing(12)
 
         # Left area
-        self.ListWidget_Conversation = QListWidget()
+        self.ListWidget_Conversation = ListBase()
 
         self.Button_ClearConversations = QPushButton()
         self.Button_ClearConversations.setStyleSheet(u"QPushButton {\n"
