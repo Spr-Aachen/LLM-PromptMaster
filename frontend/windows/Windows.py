@@ -84,15 +84,15 @@ class PromptWindow(DialogBase):
                     Prompt = f.read()
                 self.PromptDict[HistoryFileName[:-4]] = Prompt # Remove the .txt extension
                 self.ListWidget.addItem(HistoryFileName[:-4])
-                
-    def loadCurrentPrompt(self, item: QListWidgetItem):
+
+    def loadCurrentPrompt(self, item: QStandardItem):
         # Load a conversation from a txt file and display it in the browser
         self.PromptFilePath = Path(self.PromptDir).joinpath(item.text() + '.txt').as_posix()
         with open(self.PromptFilePath, 'r', encoding = 'utf-8') as f:
             Prompt = f.read()
         self.TextEdit.setText(Prompt)
 
-    def removePromptFile(self, listItem: QListWidgetItem):
+    def removePromptFile(self, listItem: QStandardItem):
         self.ListWidget.takeItem(self.ListWidget.row(listItem))
         os.remove(Path(self.PromptDir).joinpath(listItem.text() + '.txt').as_posix())
 
@@ -145,11 +145,13 @@ class PromptWindow(DialogBase):
                 f.write('')
             self.TextEdit.clear()
             # Add the given name to the history list and select it
-            NewPrompt = QListWidgetItem(PromptName)
+            NewPrompt = QStandardItem(PromptName)
             self.ListWidget.addItem(NewPrompt)
             self.ListWidget.setCurrentItem(NewPrompt)
             # Init message
             self.PromptDict[PromptName] = []
+            # Set focus to input box
+            self.TextEdit.setFocus()
 
     def ShowContextMenu(self, position):
         context_menu = QMenu(self)

@@ -98,8 +98,8 @@ class PromptTestTool():
     def run(self):
         # 启动参数解析，启动环境，应用端口由命令行传入
         parser = argparse.ArgumentParser()
-        parser.add_argument("-e","--profile", help="环境启动项", type=str)
-        parser.add_argument("-p","--port", help="端口", type=int)
+        parser.add_argument("-e", "--profile", help = "环境启动项", type = str)
+        parser.add_argument("-p", "--port",    help = "端口",       type = int)
         args = parser.parse_args()
 
         CurrentDir = sys.path[0]

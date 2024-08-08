@@ -213,7 +213,7 @@ class GPTClient(object):
     ):
         messages = [
             {
-                'role': "assistant",
+                'role': "system",
                 'content': self.Prompt
             },
             {
@@ -239,7 +239,7 @@ class GPTClient(object):
     ):
         messages = [
             {
-                'role': "assistant",
+                'role': "system",
                 'content': self.Prompt
             },
             {
