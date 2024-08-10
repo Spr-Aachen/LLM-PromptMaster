@@ -14,6 +14,8 @@ from pathlib import Path
 from typing import Optional, Union
 from sqlalchemy import engine
 
+from tools.gptTool import IntranetGPTRequest
+
 ##############################################################################################################################
 
 def IntranetAssistantRequest(
@@ -84,6 +86,7 @@ def IntranetAssistantRequest(
 
 def AssistantPromptTest(
     PFGateway: str = ...,
+    GPTGateway: str = ...,
     APP_ID: Optional[str] = None,
     APP_Secret: str = ...,
     ChatURL: str = ...,
@@ -95,6 +98,7 @@ def AssistantPromptTest(
     TotalTestTimes: Optional[int] = None,
     sqlConnection: Optional[Union[engine.Engine, engine.Connection, jaydebeapi.Connection]] = None
 ):
+    # Test the assistant
     if TotalTestTimes is not None:
         assert TotalTestTimes > 0, 'Incorrect number!'
     else:
@@ -116,6 +120,8 @@ def AssistantPromptTest(
         )
         Answers.append(result)
         CurrentTestTime += 1
+
+    # Compute the similarity matrix
     tfidf_vectorizer = TfidfVectorizer()
     tfidf_matrix = tfidf_vectorizer.fit_transform(Answers) # Transfer data into TF-IDF vector
     similarity_matrix = cosine_similarity(tfidf_matrix) # Compute cosine similarity of the matrix
@@ -129,20 +135,6 @@ def AssistantPromptTest(
         'SimilarityMatrix': [similarity_matrix]
     }
     TestResultDF = pandas.DataFrame(TestResult)
-    '''
-    csvPath = './TestResult.csv'
-    if Path(csvPath).exists():
-        TestResultsDF = pandas.read_csv(csvPath, encoding = 'utf-8')
-        TestResultsDF.drop_duplicates()
-        TestResultsDF = TestResultsDF[TestResultsDF['CodeInput'] != messages[0]['content']]
-        TestResultsDF = pandas.concat([TestResultsDF, TestResultDF])
-        TestResultsDF.reset_index(inplace = True)
-    else:
-        TestResultsDF = TestResultDF
-    TestResultsDF.to_csv(csvPath, index = False, encoding = 'utf-8')
-    with open(csvPath, 'r', encoding = 'utf-8') as f:
-        result, statuscode = f.read(), 200
-    '''
     jsonPath = './TestResult.json'
     if Path(jsonPath).exists():
         TestResultsDF = pandas.read_json(jsonPath, encoding = 'utf-8')
@@ -152,9 +144,35 @@ def AssistantPromptTest(
     else:
         TestResultsDF = TestResultDF
     TestResultsDF.to_json(jsonPath)
+
+    # Analyze the test result
+    '''
     with open(jsonPath, 'r', encoding = 'utf-8') as f:
         result, statuscode = json.load(f), 200
+    '''
+    result, statuscode = IntranetGPTRequest(
+        PFGateway = PFGateway,
+        GPTGateway = GPTGateway,
+        APP_ID = APP_ID,
+        APP_Secret = APP_Secret,
+        model = "gpt-4o",
+        messages = [
+            {
+                'role': "user",
+                'content': f"""
+                    请分析以下测试结果的相似性（若最后一个结果不完整则直接将其忽略）：
+                    {Answers}
+                """
+            }
+        ],
+        stream = stream
+    )
+    if statuscode == 200:
+        pass
+    else:
+        result = f"测试结果分析失败，将为您展示相似性矩阵：\n\n{similarity_matrix}"
 
+    # Upload the test result to the database
     if sqlConnection is not None:
         TestResultsDF.to_sql(
             name = "Prompt Test Result",
@@ -174,6 +192,7 @@ class AssistantClient(object):
         cf = configparser.ConfigParser()
         cf.read(config_file, encoding = 'utf-8')
         self.PFGateway = cf.get("GetToken", "PFGateway")
+        self.GPTGateway = cf.get("GetToken", "GPTGateway")
         self.access_key_id = cf.get("GetToken", "APPID")
         self.access_key_secret = cf.get("GetToken", "APPSecret")
         self.ChatURL = cf.get("Chat-Assistant", "ChatURL")

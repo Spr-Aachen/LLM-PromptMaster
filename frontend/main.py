@@ -207,11 +207,12 @@ class MainWindow(Window_MainWindow):
         ChildWindow_Prompt.exec()
         # Update roles
         self.roles = {**{"无": ""}, **ChildWindow_Prompt.PromptDict}
-        # Update combox
+        # Update combox and apply role
         SelectedRole = self.ui.ComboBox_Role.currentText()
         self.ui.ComboBox_Role.clear()
         self.ui.ComboBox_Role.addItems(list(self.roles.keys()))
         self.ui.ComboBox_Role.setCurrentText(SelectedRole) if SelectedRole in self.roles.keys() else None
+        self.applyRole()
 
     def LoadHistories(self):
         # Check if the conversations directory exists
@@ -235,7 +236,9 @@ class MainWindow(Window_MainWindow):
                 self.MessagesDict[HistoryFileName[:-4]] = Messages # Remove the .txt extension
                 self.ui.ListWidget_Conversation.addItem(HistoryFileName[:-4])
 
-    def loadCurrentHistory(self, item: QStandardItem):
+    def loadHistory(self, item: QStandardItem):
+        # In case the conversation isn't selected
+        self.ui.ListWidget_Conversation.setCurrentItem(item) if self.ui.ListWidget_Conversation.currentItem() != item else None
         # Load a conversation from a txt file and display it in the browser
         self.ConversationFilePath = Path(self.ConversationDir).joinpath(item.text() + '.txt').as_posix()
         with open(self.ConversationFilePath, 'r', encoding = 'utf-8') as f:
@@ -288,7 +291,7 @@ class MainWindow(Window_MainWindow):
                 self.removeConversationFiles(currentItem)
                 self.ui.TextBrowser.clear()
                 if self.ui.ListWidget_Conversation.count() > 0:
-                    self.loadCurrentHistory(self.ui.ListWidget_Conversation.currentItem()) #self.ui.ListWidget_Conversation.click(self.ui.ListWidget_Conversation.currentItem())
+                    self.loadHistory(self.ui.ListWidget_Conversation.currentItem()) #self.ui.ListWidget_Conversation.click(self.ui.ListWidget_Conversation.currentItem())
                 # Remove message
                 self.MessagesDict.pop(old_name)
 
@@ -334,6 +337,7 @@ class MainWindow(Window_MainWindow):
         listItems = [self.ui.ListWidget_Conversation.item(i) for i in range(self.ui.ListWidget_Conversation.count())]
         for listItem in listItems:
             self.removeConversationFiles(listItem)
+        self.ui.TextBrowser.clear()
 
     def saveConversation(self, Messages: list):
         if self.ui.ListWidget_Conversation.count() == 0:
@@ -541,11 +545,20 @@ class MainWindow(Window_MainWindow):
 
         self.ui.Label_Type.setText("类型")
         self.ui.ComboBox_Type.addItems(['gpt', 'assistant'])
+        self.ui.ComboBox_Type.currentTextChanged.connect(
+            lambda Text: (
+                self.ui.Label_Model.setVisible(Text == 'gpt'),
+                self.ui.ComboBox_Model.setVisible(Text == 'gpt'),
+                self.ui.Label_Role.setVisible(Text == 'gpt'),
+                self.ui.ComboBox_Role.setVisible(Text == 'gpt'),
+                self.ui.Button_ManageRole.setVisible(Text == 'gpt')
+            )
+        )
         ParamsManager_Chat.SetParam(
             Widget = self.ui.ComboBox_Type,
             Section = 'Input Params',
             Option = 'Role',
-            DefaultValue = "assistant"
+            DefaultValue = "gpt"
         )
 
         self.ui.Label_Model.setText("模型")
@@ -591,7 +604,7 @@ class MainWindow(Window_MainWindow):
         self.ui.Button_Test.clicked.connect(self.QueryTest)
 
         # Left area
-        self.ui.ListWidget_Conversation.itemClicked.connect(self.loadCurrentHistory)
+        self.ui.ListWidget_Conversation.itemClicked.connect(self.loadHistory)
         self.ui.ListWidget_Conversation.setContextMenuPolicy(Qt.CustomContextMenu)
         self.ui.ListWidget_Conversation.customContextMenuRequested.connect(self.ShowContextMenu)
 
@@ -614,7 +627,10 @@ class MainWindow(Window_MainWindow):
         self.show()
 
         # Create a new conversation while there is no history conversation
-        self.createConversation() if self.ui.ListWidget_Conversation.count() == 0 else self.loadCurrentHistory(self.ui.ListWidget_Conversation.item(0))
+        self.createConversation() if self.ui.ListWidget_Conversation.count() == 0 else self.loadHistory(self.ui.ListWidget_Conversation.item(0))
+
+        # Apply role
+        self.applyRole()
 
         # Set focus to input box
         self.ui.TextEdit_Input.setFocus()

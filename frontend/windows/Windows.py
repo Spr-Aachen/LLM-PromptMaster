@@ -85,7 +85,9 @@ class PromptWindow(DialogBase):
                 self.PromptDict[HistoryFileName[:-4]] = Prompt # Remove the .txt extension
                 self.ListWidget.addItem(HistoryFileName[:-4])
 
-    def loadCurrentPrompt(self, item: QStandardItem):
+    def loadPrompt(self, item: QStandardItem):
+        # In case the prompt isn't selected
+        self.ListWidget.setCurrentItem(item) if self.ListWidget.currentItem() != item else None
         # Load a conversation from a txt file and display it in the browser
         self.PromptFilePath = Path(self.PromptDir).joinpath(item.text() + '.txt').as_posix()
         with open(self.PromptFilePath, 'r', encoding = 'utf-8') as f:
@@ -126,7 +128,7 @@ class PromptWindow(DialogBase):
                 self.removePromptFile(currentItem)
                 self.TextEdit.clear()
                 if self.ListWidget.count() > 0:
-                    self.loadCurrentPrompt(self.ListWidget.currentItem())
+                    self.loadPrompt(self.ListWidget.currentItem())
                 # Remove message
                 self.PromptDict.pop(old_name)
 
@@ -187,12 +189,15 @@ class PromptWindow(DialogBase):
         self.Button_DeletePrompt.setText('Delete Prompt')
         self.Button_DeletePrompt.clicked.connect(self.deletePrompt)
 
-        self.ListWidget.itemClicked.connect(self.loadCurrentPrompt)
+        self.ListWidget.itemClicked.connect(self.loadPrompt)
         self.ListWidget.setContextMenuPolicy(Qt.CustomContextMenu)
         self.ListWidget.customContextMenuRequested.connect(self.ShowContextMenu)
 
         # Load prompt
         self.LoadPromptList()
+
+        # Create a new conversation while there is no history conversation
+        None if self.ListWidget.count() == 0 else self.loadPrompt(self.ListWidget.item(0))
 
         super().exec()
 
