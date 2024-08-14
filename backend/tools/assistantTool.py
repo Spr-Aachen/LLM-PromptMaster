@@ -44,7 +44,7 @@ def IntranetAssistantRequest(
         accessToken = res_token.get("data", {}).get("access_token", "")
         oauth_token = f"Bearer {accessToken}"
     else:
-        return "Request failed", response.status_code
+        yield "Request failed", response.status_code
     # 请求智库接口
     url = f"{PFGateway}/{ChatURL}/{assistantCode}"
     Headers = {
@@ -77,11 +77,11 @@ def IntranetAssistantRequest(
                         result = parsed_content['data']['data']['choices'][0]['message']['content']
                     except:
                         result = parsed_content['data']['dataContent']
-                    return result, response.status_code
+                    yield result, response.status_code
                 except json.JSONDecodeError:
                     continue
     else:
-        return "Request failed", response.status_code
+        yield "Request failed", response.status_code
 
 
 def AssistantPromptTest(
@@ -102,12 +102,12 @@ def AssistantPromptTest(
     if TotalTestTimes is not None:
         assert TotalTestTimes > 0, 'Incorrect number!'
     else:
-        return
+        yield
     CurrentTestTime = 1
     Answers = []
     while CurrentTestTime <= TotalTestTimes:
         print('Current test time:', CurrentTestTime)
-        result, statuscode = IntranetAssistantRequest(
+        for result, statuscode in IntranetAssistantRequest(
             PFGateway = PFGateway,
             APP_ID = APP_ID,
             APP_Secret = APP_Secret,
@@ -116,9 +116,9 @@ def AssistantPromptTest(
             assistantCode = assistantCode,
             messages = messages,
             options = options,
-            stream = stream
-        )
-        Answers.append(result)
+            stream = False
+        ): # This iteration would be only executed for once since the stream option is set to false
+            Answers.append(result)
         CurrentTestTime += 1
 
     # Compute the similarity matrix
@@ -160,7 +160,7 @@ def AssistantPromptTest(
             {
                 'role': "user",
                 'content': f"""
-                    请分析以下测试结果的相似性（若最后一个结果不完整则直接将其忽略）：
+                    请分析以下测试结果的相似性（若最后一个结果不完整则直接将其忽略），要求在进行详细分析前先计算总体的相似度百分比：
                     {Answers}
                 """
             }
@@ -182,7 +182,7 @@ def AssistantPromptTest(
         sqlConnection.close()
         result += "\n测试结果已上传到数据库"
 
-    return result, statuscode
+    yield result, statuscode
 
 
 class AssistantClient(object):

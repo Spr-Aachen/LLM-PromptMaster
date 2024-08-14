@@ -7,12 +7,15 @@ import json
 import requests
 import pytz
 from datetime import date, datetime
+from pathlib import Path
 from typing import Optional
 from PySide6.QtCore import Qt, QObject, Signal, Slot, QThread
 from PySide6.QtCore import QCoreApplication as QCA
-from PySide6.QtGui import QTextCursor, QAction
+from PySide6.QtGui import QTextCursor, QAction, QStandardItem
 from PySide6.QtWidgets import *
 from QEasyWidgets import QFunctions as QFunc
+from QEasyWidgets import ComponentsSignals, Theme, EasyTheme, IconBase
+from QEasyWidgets.Windows import MenuBase, InputDialogBase
 
 from Functions import *
 from windows.Windows import *
@@ -44,7 +47,8 @@ def chatRequest(
     model: Optional[str] = None,
     messages: list[dict] = [{}],
     options: Optional[dict] = None,
-    testtimes: Optional[int] = None
+    testtimes: Optional[int] = None,
+    stream: bool = True
 ):
     # 双Token身份验证，获取令牌
     if port is None:
@@ -63,7 +67,7 @@ def chatRequest(
         Token = res_token.get("data", {})
         oauth_token = f"Bearer {Token}"
     else:
-        return "Request failed", response.status_code
+        yield "Request failed", response.status_code
 
     # gpt/智能体接口请求
     if type == 'gpt':
@@ -83,20 +87,22 @@ def chatRequest(
     response = requests.post(
         url = URL,
         headers = Headers,
-        data = json.dumps(Payload)
+        data = json.dumps(Payload),
+        stream = stream
     )
     if response.status_code == 200:
         content = ""
         for chunk in response.iter_content(chunk_size = 1024, decode_unicode = True):
             if chunk:
-                content += chunk#.decode('utf-8')
                 try:
+                    content += chunk#.decode('utf-8')
                     parsed_content = json.loads(content)
-                    return parsed_content['data'], response.status_code
+                    result = parsed_content['data']
+                    yield result, response.status_code
                 except json.JSONDecodeError:
                     continue
     else:
-        return "Request failed", response.status_code
+        yield "Request failed", response.status_code
 
 
 def exitRequest(
@@ -138,7 +144,7 @@ class RequestThread(QThread):
         self.testtimes = testtimes
 
     def run(self):
-        result, statuscode = chatRequest(
+         for result, statuscode in chatRequest(
             #env = self.env,
             protocol = self.protocol,
             ip = self.ip,
@@ -148,8 +154,8 @@ class RequestThread(QThread):
             messages = self.messages,
             options = self.options,
             testtimes = self.testtimes
-        )
-        self.textReceived.emit(str(result) if statuscode == 200 else "请求失败")
+        ):
+            self.textReceived.emit(str(result) if statuscode == 200 else "请求失败")
 
 ##############################################################################################################################
 
@@ -194,6 +200,8 @@ class MainWindow(Window_MainWindow):
             return
         '''
         for ConversationName, Messages in self.MessagesDict.items():
+            for Message in Messages.copy():
+                Messages.remove(Message) if Message['role'] == 'system' else None
             Messages.append(
                 {
                     'role': 'system',
@@ -262,7 +270,7 @@ class MainWindow(Window_MainWindow):
         currentItem = self.ui.ListWidget_Conversation.currentItem()
         if currentItem is not None:
             old_name = currentItem.text()
-            new_name, ok = QInputDialog.getText(self,
+            new_name, ok = InputDialogBase.getText(self,
                 'Rename Conversation',
                 'Enter new conversation name:'
             )
@@ -325,7 +333,7 @@ class MainWindow(Window_MainWindow):
         self.ui.TextEdit_Input.setFocus()
 
     def ShowContextMenu(self, position):
-        context_menu = QMenu(self)
+        context_menu = MenuBase(self)
         delete_action = QAction("Delete Conversation", self)
         delete_action.triggered.connect(self.deleteConversation)
         rename_action = QAction("Rename Conversation", self)
@@ -367,12 +375,10 @@ class MainWindow(Window_MainWindow):
 
     def recieveAnswer(self, recievedText, ConversationName):
         Messages = self.MessagesDict[ConversationName]
+        if Messages[-1]['role'] == 'assistant':
+            Messages[-1]['content'] += recievedText
         if Messages[-1]['role'] == 'user':
             Messages.append({'role': 'assistant', 'content': recievedText})
-        '''
-        else:
-            Messages[-1]['content'] += recievedText
-        '''
         self.MessagesDict[ConversationName] = Messages
         self.updateRecord(ConversationName)
 
@@ -427,7 +433,7 @@ class MainWindow(Window_MainWindow):
         InputContent = self.ui.TextEdit_Input.toPlainText()
         self.createConversation() if self.ui.ListWidget_Conversation.count() == 0 else None
         ConversationName = self.ui.ListWidget_Conversation.currentItem().text()
-        TotalTestTimes, ok = QInputDialog.getText(self,
+        TotalTestTimes, ok = InputDialogBase.getText(self,
             'Set Testing Times',
             'Enter testing times:'
         )
@@ -475,12 +481,12 @@ class MainWindow(Window_MainWindow):
         self.ConfigDir = args.configdir
 
         # Chat - ParamsManager
-        Path_Config_Chat = NormPath(Path(self.ConfigDir).joinpath('Config_Chat.ini'))
+        Path_Config_Chat = QFunc.NormPath(Path(self.ConfigDir).joinpath('Config_Chat.ini'))
         ParamsManager_Chat = ParamsManager(Path_Config_Chat)
 
         '''
         self.setWindowTitle('PromptTest Client')
-        self.setWindowIcon(QIcon(NormPath(Path(CurrentDir).joinpath('icon.png'))))
+        self.setWindowIcon(QIcon(QFunc.NormPath(Path(CurrentDir).joinpath('icon.png'))))
         '''
 
         # Theme toggler

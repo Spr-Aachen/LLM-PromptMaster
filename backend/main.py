@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 
 import os
+import io
 import sys
 import uvicorn
 import argparse
 from typing import Union, Optional
 from fastapi import FastAPI, Request, Response, status, Depends
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -122,16 +123,30 @@ class PromptTestTool():
             reqJs = await request.json()
             message = reqJs.get('message', None)
             options = reqJs.get('options', None)
-            result, statuscode = gptClient.run(model, message, options) if testtimes is None else gptClient.test(model, message, options, testtimes)
-            return {"code": statuscode, "message": "成功" if statuscode == 200 else "失败", "data": result}
+            for result, statuscode in gptClient.run(model, message, options) if testtimes is None else gptClient.test(model, message, options, testtimes):
+                contentstream = io.StringIO(
+                    {"code": statuscode, "message": "成功" if statuscode == 200 else "失败", "data": result}
+                )
+                return StreamingResponse(
+                    content = contentstream,
+                    status_code = statuscode,
+                    media_type = "application/json"
+                )
 
         @self._app.post("/assistant")
         async def assistant(request: Request, testtimes: Optional[int] = None):
             reqJs = await request.json()
             message = reqJs.get('message', None)
             options = reqJs.get('options', None)
-            result, statuscode = assistantClient.run(message, options) if testtimes is None else assistantClient.test(message, options, testtimes)
-            return {"code": statuscode, "message": "成功" if statuscode == 200 else "失败", "data": result}
+            for result, statuscode in assistantClient.run(message, options) if testtimes is None else assistantClient.test(message, options, testtimes):
+                contentstream = io.StringIO(
+                    {"code": statuscode, "message": "成功" if statuscode == 200 else "失败", "data": result}
+                )
+                return StreamingResponse(
+                    content = contentstream,
+                    status_code = statuscode,
+                    media_type = "application/json"
+                )
 
         '''
         models.Base.metadata.create_all(bind = engine)
