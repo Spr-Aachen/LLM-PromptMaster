@@ -17,3 +17,7 @@
 
 #
 **/sql/
+
+# Frontend&Backend generated files
+**/TestResult.json
+**/Profile/

@@ -84,25 +84,24 @@ def chatRequest(
     } if options is not None else {
         'message': messages
     }
-    response = requests.post(
+    with requests.post(
         url = URL,
         headers = Headers,
         data = json.dumps(Payload),
         stream = stream
-    )
-    if response.status_code == 200:
-        content = ""
-        for chunk in response.iter_content(chunk_size = 1024, decode_unicode = True):
-            if chunk:
-                try:
-                    content += chunk#.decode('utf-8')
-                    parsed_content = json.loads(content)
-                    result = parsed_content['data']
-                    yield result, response.status_code
-                except json.JSONDecodeError:
-                    continue
-    else:
-        yield "Request failed", response.status_code
+    ) as response:
+        if response.status_code == 200:
+            for chunk in response.iter_content(chunk_size = 1024 if stream else None, decode_unicode = False):
+                if chunk:
+                    content = chunk.decode('utf-8', errors = 'ignore')
+                    try:
+                        parsed_content = json.loads(content)
+                        result = parsed_content['data']
+                        yield result, response.status_code
+                    except:
+                        continue
+        else:
+            yield "Request failed", response.status_code
 
 
 def exitRequest(
@@ -144,7 +143,7 @@ class RequestThread(QThread):
         self.testtimes = testtimes
 
     def run(self):
-         for result, statuscode in chatRequest(
+        for result, statuscode in chatRequest(
             #env = self.env,
             protocol = self.protocol,
             ip = self.ip,
@@ -174,7 +173,7 @@ class MainWindow(Window_MainWindow):
 
         self.resize(900, 600)
 
-    def loadRoles(self):
+    def getRoles(self):
         # Check if the prompt directory exists
         if not os.path.exists(self.PromptDir):
             os.makedirs(self.PromptDir)
@@ -188,11 +187,7 @@ class MainWindow(Window_MainWindow):
                 with open(HistoryFilePath, 'r', encoding = 'utf-8') as f:
                     Prompt = f.read()
                 self.roles[HistoryFileName[:-4]] = Prompt
-        # Update combox
-        SelectedRole = self.ui.ComboBox_Role.currentText()
-        self.ui.ComboBox_Role.clear()
-        self.ui.ComboBox_Role.addItems(list(self.roles.keys()))
-        self.ui.ComboBox_Role.setCurrentText(SelectedRole) if SelectedRole in self.roles.keys() else None
+        return self.roles
 
     def applyRole(self):
         '''
@@ -289,11 +284,11 @@ class MainWindow(Window_MainWindow):
         currentItem = self.ui.ListWidget_Conversation.currentItem()
         if currentItem is not None:
             old_name = currentItem.text()
-            confirm = QMessageBox.question(self,
+            confirm = MessageBoxBase.pop(self,
+                QMessageBox.Question,
                 'Delete Conversation',
-                'Are you sure you want to delete this conversation?',
+                'Sure you wanna delete this conversation?',
                 QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.No
             )
             if confirm == QMessageBox.Yes:
                 self.removeConversationFiles(currentItem)
@@ -440,10 +435,11 @@ class MainWindow(Window_MainWindow):
         if ok and TotalTestTimes.strip().__len__() > 0:
             self.TotalTestTimes = int(TotalTestTimes.strip())
             if self.TotalTestTimes <= 0:
-                MsgBox = QMessageBox()
-                MsgBox.setWindowTitle('Warning')
-                MsgBox.setText(f'Incorrect number!')
-                MsgBox.exec()
+                Function_ShowMessageBox(self,
+                    QMessageBox.Warning,
+                    'Warning',
+                    'Incorrect number!'
+                )
                 return
         else:
             return
@@ -520,6 +516,9 @@ class MainWindow(Window_MainWindow):
         self.ui.Button_Minimize_Window.clicked.connect(self.showMinimized)
 
         # Top area
+        self.ui.ToolBox.widget(0).setText(QCA.translate("ToolBox", "参数配置"))
+        #self.ui.ToolBox.widget(0).collapse()
+
         self.ui.Label_Protocal.setText("协议")
         self.ui.ComboBox_Protocol.addItems(['http', 'https'])
         ParamsManager_Chat.SetParam(
@@ -577,7 +576,7 @@ class MainWindow(Window_MainWindow):
         )
 
         self.ui.Label_Role.setText("角色")
-        self.ui.ComboBox_Role.addItems(list(self.roles.keys()))
+        self.ui.ComboBox_Role.addItems(list(self.getRoles().keys()))
         self.ui.ComboBox_Role.activated.connect(self.applyRole)
         ParamsManager_Chat.SetParam(
             Widget = self.ui.ComboBox_Role,
@@ -586,6 +585,7 @@ class MainWindow(Window_MainWindow):
             DefaultValue = "无"
         )
 
+        self.ui.Button_ManageRole.setText("")
         self.ui.Button_ManageRole.setToolTip("管理角色")
         self.ui.Button_ManageRole.setIcon(IconBase.Ellipsis)
         self.ui.Button_ManageRole.clicked.connect(self.manageRole)
@@ -619,9 +619,6 @@ class MainWindow(Window_MainWindow):
 
         self.ui.Button_CreateConversation.setText('创建对话')
         self.ui.Button_CreateConversation.clicked.connect(self.createConversation)
-
-        # Load roles
-        self.loadRoles()
 
         # Load histories
         self.LoadHistories()

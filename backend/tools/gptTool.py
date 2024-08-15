@@ -76,30 +76,32 @@ def IntranetGPTRequest(
         } if options is not None else {
             'prompt': f"{messages[0]['content']}\n{messages[1]['content']}"
         }
-    response = requests.post(
-        url = url,
+        stream = False # 图片生成接口不支持流式输出
+    with requests.post(
+        url = url if not stream else url.replace('/chatCompletion', '/streamChatCompletion'),
         headers = Headers,
         data = json.dumps(Payload),
         stream = stream
-    )
-    print(f"请求智库返回响应结果:\n{json.loads(response.text)}")
-    if response.status_code == 200:
-        content = ""
-        for chunk in response.iter_content(chunk_size = 1024, decode_unicode = True):
-            #chunk = ast.literal_eval(chunk)
-            if chunk:
-                content += chunk#.decode('utf-8')
-                try:
-                    parsed_content = json.loads(content)
-                    if model in ChatURLs_Norm:
-                        result = parsed_content['data']['choices'][0]['message']['content']
-                    if model in ChatURLs_Paint:
-                        result = parsed_content['data']['data'][0]['url']
-                    yield result, response.status_code
-                except json.JSONDecodeError:
-                    continue
-    else:
-        yield "Request failed", response.status_code
+    ) as response:
+        if response.status_code == 200:
+            for chunk in response.iter_content(chunk_size = 1024 if stream else None, decode_unicode = False):
+                if chunk:
+                    buffer = chunk.decode('utf-8', errors = 'ignore')
+                    if stream:
+                        buffer = "".join(line[len("data:"):] if line.startswith("data:") else line for line in buffer.splitlines()) # remove all the 'data:' suffix
+                    try:
+                        parsed_content = json.loads(buffer)
+                        #print('buffer successfully parsed:\n', buffer)
+                        if model in ChatURLs_Norm:
+                            result = parsed_content['choices'][0]['delta']['content'] if stream else parsed_content['data']['choices'][0]['message']['content']
+                        if model in ChatURLs_Paint:
+                            result = parsed_content['data']['data'][0]['url']
+                        yield result, response.status_code
+                    except:
+                        #print('failed to load buffer:\n', buffer)
+                        continue
+        else:
+            yield "Request failed", response.status_code
 
 
 def GPTPromptTest(
@@ -160,12 +162,21 @@ def GPTPromptTest(
         TestResultsDF = TestResultDF
     TestResultsDF.to_json(jsonPath)
 
-    # Analysis the test result
+    # Upload the test result to the database
+    if sqlConnection is not None:
+        TestResultsDF.to_sql(
+            name = "Prompt Test Result",
+            con = sqlConnection,
+            if_exists = 'replace'
+        )
+        sqlConnection.close()
+
+    # Analyze the test result
     '''
     with open(jsonPath, 'r', encoding = 'utf-8') as f:
         result, statuscode = json.load(f), 200
     '''
-    result, statuscode = IntranetGPTRequest(
+    for result, statuscode in IntranetGPTRequest(
         PFGateway = PFGateway,
         GPTGateway = GPTGateway,
         APP_ID = APP_ID,
@@ -181,23 +192,10 @@ def GPTPromptTest(
             }
         ],
         stream = stream
-    )
-    if statuscode == 200:
-        pass
-    else:
-        result = f"测试结果分析失败，将为您展示相似性矩阵：\n\n{similarity_matrix}"
-
-    # Upload the test result to the database
-    if sqlConnection is not None:
-        TestResultsDF.to_sql(
-            name = "Prompt Test Result",
-            con = sqlConnection,
-            if_exists = 'replace'
-        )
-        sqlConnection.close()
-        result += "\n测试结果已上传到数据库"
-
-    yield result, statuscode
+    ):
+        if statuscode != 200:
+            result = f"测试结果分析失败，将为您展示相似性矩阵：\n\n{similarity_matrix}"
+        yield result, 200
 
 
 class GPTClient(object):
@@ -221,7 +219,7 @@ class GPTClient(object):
         self.sqlURL = cf.get("Test-SQL", "sqlURL")
         '''
 
-    def run(self,
+    async def run(self,
         model: str,
         messages: Union[str, list],
         options: Optional[dict] = None
@@ -236,7 +234,7 @@ class GPTClient(object):
                 'content': str(messages),
             }
         ] if not (isinstance(messages, list) and isinstance(messages[0], dict)) else messages
-        return IntranetGPTRequest(
+        for result, statuscode in IntranetGPTRequest(
             PFGateway = self.PFGateway,
             GPTGateway = self.GPTGateway,
             APP_ID = self.access_key_id,
@@ -244,9 +242,12 @@ class GPTClient(object):
             model = model,
             messages = messages,
             options = options
-        )
+        ):
+            yield json.dumps(
+                {"code": statuscode, "message": "成功" if statuscode == 200 else "失败", "data": result}
+            )
 
-    def test(self,
+    async def test(self,
         model: str,
         messages: Union[str, list],
         options: Optional[dict] = None,
@@ -270,7 +271,7 @@ class GPTClient(object):
             jars = self.jarPath
         )
         '''
-        return GPTPromptTest(
+        for result, statuscode in GPTPromptTest(
             PFGateway = self.PFGateway,
             GPTGateway = self.GPTGateway,
             APP_ID = self.access_key_id,
@@ -279,6 +280,9 @@ class GPTClient(object):
             messages = messages,
             options = options,
             TotalTestTimes = testTimes
-        )
+        ):
+            yield json.dumps(
+               {"code": statuscode, "message": "成功" if statuscode == 200 else "失败", "data": result}
+            )
 
 ##############################################################################################################################

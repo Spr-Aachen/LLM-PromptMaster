@@ -3,6 +3,7 @@
 import os
 import io
 import sys
+import json
 import uvicorn
 import argparse
 from typing import Union, Optional
@@ -123,30 +124,22 @@ class PromptTestTool():
             reqJs = await request.json()
             message = reqJs.get('message', None)
             options = reqJs.get('options', None)
-            for result, statuscode in gptClient.run(model, message, options) if testtimes is None else gptClient.test(model, message, options, testtimes):
-                contentstream = io.StringIO(
-                    {"code": statuscode, "message": "成功" if statuscode == 200 else "失败", "data": result}
-                )
-                return StreamingResponse(
-                    content = contentstream,
-                    status_code = statuscode,
-                    media_type = "application/json"
-                )
+            contentstream = gptClient.run(model, message, options) if testtimes is None else gptClient.test(model, message, options, testtimes)
+            return StreamingResponse(
+                content = contentstream,
+                media_type = "application/json"
+            )
 
         @self._app.post("/assistant")
         async def assistant(request: Request, testtimes: Optional[int] = None):
             reqJs = await request.json()
             message = reqJs.get('message', None)
             options = reqJs.get('options', None)
-            for result, statuscode in assistantClient.run(message, options) if testtimes is None else assistantClient.test(message, options, testtimes):
-                contentstream = io.StringIO(
-                    {"code": statuscode, "message": "成功" if statuscode == 200 else "失败", "data": result}
-                )
-                return StreamingResponse(
-                    content = contentstream,
-                    status_code = statuscode,
-                    media_type = "application/json"
-                )
+            contentstream = assistantClient.run(message, options) if testtimes is None else assistantClient.test(message, options, testtimes)
+            return StreamingResponse(
+                content = contentstream,
+                media_type = "application/json"
+            )
 
         '''
         models.Base.metadata.create_all(bind = engine)

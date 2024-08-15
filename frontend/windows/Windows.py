@@ -5,7 +5,7 @@ from PySide6.QtWidgets import *
 from QEasyWidgets import QFunctions as QFunc
 from PySide6.QtGui import QAction, QStandardItem
 from QEasyWidgets.Components import ListBase
-from QEasyWidgets.Windows import ChildWindowBase, DialogBase
+from QEasyWidgets.Windows import ChildWindowBase, DialogBase, InputDialogBase
 
 from windows.ui.UI_Window import *
 
@@ -106,7 +106,7 @@ class PromptWindow(DialogBase):
         currentItem = self.ListWidget.currentItem()
         if currentItem is not None:
             old_name = currentItem.text()
-            new_name, ok = QInputDialog.getText(self,
+            new_name, ok = InputDialogBase.getText(self,
                 'Rename Prompt',
                 'Enter new prompt name:'
             )
@@ -122,11 +122,11 @@ class PromptWindow(DialogBase):
         currentItem = self.ListWidget.currentItem()
         if currentItem is not None:
             old_name = currentItem.text()
-            confirm = QMessageBox.question(self,
+            confirm = MessageBoxBase.pop(self,
+                QMessageBox.Question,
                 'Delete Prompt',
                 'Are you sure you want to delete this Prompt?',
                 QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.No
             )
             if confirm == QMessageBox.Yes:
                 self.removePromptFile(currentItem)
@@ -137,7 +137,7 @@ class PromptWindow(DialogBase):
                 self.PromptDict.pop(old_name)
 
     def createPrompt(self):
-        PromptName, ok = QInputDialog.getText(self,
+        PromptName, ok = InputDialogBase.getText(self,
             'Rename Prompt',
             'Enter new prompt name:'
         )

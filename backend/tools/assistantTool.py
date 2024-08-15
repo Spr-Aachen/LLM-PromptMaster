@@ -58,30 +58,33 @@ def IntranetAssistantRequest(
     } if options is not None else {
         'messages': messages
     }
-    response = requests.post(
-        url = url,
+    with requests.post(
+        url = url if not stream else url.replace('/chat', '/streamChat'),
         headers = Headers,
         data = json.dumps(Payload),
         stream = stream
-    )
-    print(f"请求智库返回响应结果:\n{json.loads(response.text)}")
-    if response.status_code == 200:
-        content = ""
-        for chunk in response.iter_content(chunk_size = 1024, decode_unicode = True):
-            #chunk = ast.literal_eval(chunk)
-            if chunk:
-                content += chunk#.decode('utf-8')
-                try:
-                    parsed_content = json.loads(content)
+    ) as response:
+        if response.status_code == 200:
+            for chunk in response.iter_content(chunk_size = 1024 if stream else None, decode_unicode = False):
+                if chunk:
+                    buffer = chunk.decode('utf-8', errors = 'ignore')
+                    '''
+                    if stream:
+                        buffer = "".join(line[len("data:"):] if line.startswith("data:") else line for line in buffer.splitlines()) # remove all the 'data:' suffix
+                    '''
                     try:
-                        result = parsed_content['data']['data']['choices'][0]['message']['content']
+                        parsed_content = json.loads(buffer)
+                        #print('buffer successfully parsed:\n', buffer)
+                        try:
+                            result = parsed_content['data']['data']['choices'][0]['message']['content']
+                        except:
+                            result = parsed_content['data']['dataContent']
+                        yield result, response.status_code
                     except:
-                        result = parsed_content['data']['dataContent']
-                    yield result, response.status_code
-                except json.JSONDecodeError:
-                    continue
-    else:
-        yield "Request failed", response.status_code
+                        #print('failed to load buffer:\n', buffer)
+                        continue
+        else:
+            yield "Request failed", response.status_code
 
 
 def AssistantPromptTest(
@@ -145,12 +148,21 @@ def AssistantPromptTest(
         TestResultsDF = TestResultDF
     TestResultsDF.to_json(jsonPath)
 
+    # Upload the test result to the database
+    if sqlConnection is not None:
+        TestResultsDF.to_sql(
+            name = "Prompt Test Result",
+            con = sqlConnection,
+            if_exists = 'replace'
+        )
+        sqlConnection.close()
+
     # Analyze the test result
     '''
     with open(jsonPath, 'r', encoding = 'utf-8') as f:
         result, statuscode = json.load(f), 200
     '''
-    result, statuscode = IntranetGPTRequest(
+    for result, statuscode in IntranetGPTRequest(
         PFGateway = PFGateway,
         GPTGateway = GPTGateway,
         APP_ID = APP_ID,
@@ -166,23 +178,10 @@ def AssistantPromptTest(
             }
         ],
         stream = stream
-    )
-    if statuscode == 200:
-        pass
-    else:
-        result = f"测试结果分析失败，将为您展示相似性矩阵：\n\n{similarity_matrix}"
-
-    # Upload the test result to the database
-    if sqlConnection is not None:
-        TestResultsDF.to_sql(
-            name = "Prompt Test Result",
-            con = sqlConnection,
-            if_exists = 'replace'
-        )
-        sqlConnection.close()
-        result += "\n测试结果已上传到数据库"
-
-    yield result, statuscode
+    ):
+        if statuscode != 200:
+            result = f"测试结果分析失败，将为您展示相似性矩阵：\n\n{similarity_matrix}"
+        yield result, 200
 
 
 class AssistantClient(object):
@@ -206,7 +205,7 @@ class AssistantClient(object):
         self.sqlURL = cf.get("Test-SQL", "sqlURL")
         '''
 
-    def run(self,
+    async def run(self,
         messages: Union[str, list],
         options: Optional[dict] = None
     ):
@@ -216,7 +215,7 @@ class AssistantClient(object):
                 'content': str(messages),
             }
         ] if not (isinstance(messages, list) and isinstance(messages[0], dict)) else messages
-        return IntranetAssistantRequest(
+        for result, statuscode in IntranetAssistantRequest(
             PFGateway = self.PFGateway,
             APP_ID = self.access_key_id,
             APP_Secret = self.access_key_secret,
@@ -225,9 +224,12 @@ class AssistantClient(object):
             assistantCode = self.AssistantCode,
             messages = messages,
             options = options
-        )
+        ):
+            yield json.dumps(
+                {"code": statuscode, "message": "成功" if statuscode == 200 else "失败", "data": result}
+            )
 
-    def test(self,
+    async def test(self,
         messages: Union[str, list],
         options: Optional[dict] = None,
         testTimes: Optional[int] = None
@@ -246,7 +248,7 @@ class AssistantClient(object):
             jars = self.jarPath
         )
         '''
-        return AssistantPromptTest(
+        for result, statuscode in AssistantPromptTest(
             PFGateway = self.PFGateway,
             APP_ID = self.access_key_id,
             APP_Secret = self.access_key_secret,
@@ -256,6 +258,9 @@ class AssistantClient(object):
             messages = messages,
             options = options,
             TotalTestTimes = testTimes
-        )
+        ):
+            yield json.dumps(
+               {"code": statuscode, "message": "成功" if statuscode == 200 else "失败", "data": result}
+            )
 
 ##############################################################################################################################
