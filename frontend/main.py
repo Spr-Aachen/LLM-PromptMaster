@@ -19,6 +19,7 @@ from QEasyWidgets.Windows import MenuBase, InputDialogBase
 
 from Functions import *
 from windows.Windows import *
+from config import PromptDir, ConversationDir, ProfileDir, QuestionDir
 
 ##############################################################################################################################
 
@@ -465,10 +466,10 @@ class MainWindow(Window_MainWindow):
     def Main(self):
         # 启动参数解析，启动环境，应用端口由命令行传入
         parser = argparse.ArgumentParser()
-        parser.add_argument("--promptdir",       help = "prompt目录", type = str)
-        parser.add_argument("--conversationdir", help = "对话目录",   type = str)
-        parser.add_argument("--questiondir",     help = "问题目录",   type = str)
-        parser.add_argument("--configdir",       help = "配置目录",   type = str)
+        parser.add_argument("--promptdir",       help = "prompt目录", type = str, default = PromptDir)
+        parser.add_argument("--conversationdir", help = "对话目录",   type = str, default = ConversationDir)
+        parser.add_argument("--questiondir",     help = "问题目录",   type = str, default = ProfileDir)
+        parser.add_argument("--configdir",       help = "配置目录",   type = str, default = QuestionDir)
         args = parser.parse_args()
 
         self.PromptDir = args.promptdir
@@ -512,8 +513,28 @@ class MainWindow(Window_MainWindow):
             )
         )
         self.ui.Button_Close_Window.clicked.connect(self.close)
+        self.ui.Button_Close_Window.ClearDefaultStyleSheet()
+        self.ui.Button_Close_Window.setStyleSheet(
+            "ButtonBase {background-color: transparent; border: none;}"
+            "ButtonBase:hover {background-color: rgba(210, 123, 123, 210);}"
+        )
+        self.ui.Button_Close_Window.setIcon(IconBase.X)
+
         self.ui.Button_Maximize_Window.clicked.connect(lambda: self.showNormal() if self.isMaximized() else self.showMaximized())
+        self.ui.Button_Maximize_Window.ClearDefaultStyleSheet()
+        self.ui.Button_Maximize_Window.setStyleSheet(
+            "ButtonBase {background-color: transparent; border: none;}"
+            "ButtonBase:hover {background-color: rgba(123, 123, 123, 123);}"
+        )
+        self.ui.Button_Maximize_Window.setIcon(IconBase.FullScreen)
+
         self.ui.Button_Minimize_Window.clicked.connect(self.showMinimized)
+        self.ui.Button_Minimize_Window.ClearDefaultStyleSheet()
+        self.ui.Button_Minimize_Window.setStyleSheet(
+            "ButtonBase {background-color: transparent; border: none;}"
+            "ButtonBase:hover {background-color: rgba(123, 123, 123, 123);}"
+        )
+        self.ui.Button_Minimize_Window.setIcon(IconBase.Dash)
 
         # Top area
         self.ui.ToolBox.widget(0).setText(QCA.translate("ToolBox", "参数配置"))
