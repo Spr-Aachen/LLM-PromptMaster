@@ -19,7 +19,7 @@ from QEasyWidgets.Windows import MenuBase, InputDialogBase
 
 from Functions import *
 from windows.Windows import *
-from config import PromptDir, ConversationDir, ProfileDir, QuestionDir
+from config import CurrentDir, PromptDir, ConversationDir, QuestionDir, ConfigDir
 
 ##############################################################################################################################
 
@@ -257,7 +257,7 @@ class MainWindow(Window_MainWindow):
         # Set qustion
         self.ui.TextEdit_Input.setText(Question)
 
-    def removeConversationFiles(self, listItem: QStandardItem):
+    def removeHistoryFiles(self, listItem: QStandardItem):
         self.ui.ListWidget_Conversation.takeItem(self.ui.ListWidget_Conversation.row(listItem))
         os.remove(Path(self.ConversationDir).joinpath(listItem.text() + '.txt').as_posix())
         os.remove(Path(self.QuestionDir).joinpath(listItem.text() + '.txt').as_posix())
@@ -278,7 +278,7 @@ class MainWindow(Window_MainWindow):
                 os.rename(Path(self.QuestionDir).joinpath(f"{old_name}.txt"), self.QuestionFilePath)
                 # Transfer&Remove message
                 self.MessagesDict[new_name] = self.MessagesDict[old_name]
-                self.MessagesDict.pop(old_name)
+                self.MessagesDict.pop(old_name) # Remove message
                 self.applyRole()
 
     def deleteConversation(self):
@@ -292,12 +292,11 @@ class MainWindow(Window_MainWindow):
                 QMessageBox.Yes | QMessageBox.No,
             )
             if confirm == QMessageBox.Yes:
-                self.removeConversationFiles(currentItem)
+                self.removeHistoryFiles(currentItem) # Remove file
                 self.ui.TextBrowser.clear()
                 if self.ui.ListWidget_Conversation.count() > 0:
-                    self.loadHistory(self.ui.ListWidget_Conversation.currentItem()) #self.ui.ListWidget_Conversation.click(self.ui.ListWidget_Conversation.currentItem())
-                # Remove message
-                self.MessagesDict.pop(old_name)
+                    self.loadHistory(self.ui.ListWidget_Conversation.currentItem())
+                self.MessagesDict.pop(old_name) # Remove message
 
     def createConversation(self):
         # Get the current time as the name of conversation
@@ -340,7 +339,8 @@ class MainWindow(Window_MainWindow):
     def ClearConversations(self):
         listItems = [self.ui.ListWidget_Conversation.item(i) for i in range(self.ui.ListWidget_Conversation.count())]
         for listItem in listItems:
-            self.removeConversationFiles(listItem)
+            self.removeHistoryFiles(listItem) # Remove file
+            self.MessagesDict.pop(listItem.text()) # Remove message
         self.ui.TextBrowser.clear()
 
     def saveConversation(self, Messages: list):
@@ -468,8 +468,8 @@ class MainWindow(Window_MainWindow):
         parser = argparse.ArgumentParser()
         parser.add_argument("--promptdir",       help = "prompt目录", type = str, default = PromptDir)
         parser.add_argument("--conversationdir", help = "对话目录",   type = str, default = ConversationDir)
-        parser.add_argument("--questiondir",     help = "问题目录",   type = str, default = ProfileDir)
-        parser.add_argument("--configdir",       help = "配置目录",   type = str, default = QuestionDir)
+        parser.add_argument("--questiondir",     help = "问题目录",   type = str, default = QuestionDir)
+        parser.add_argument("--configdir",       help = "配置目录",   type = str, default = ConfigDir)
         args = parser.parse_args()
 
         self.PromptDir = args.promptdir
@@ -481,10 +481,8 @@ class MainWindow(Window_MainWindow):
         Path_Config_Chat = QFunc.NormPath(Path(self.ConfigDir).joinpath('Config_Chat.ini'))
         ParamsManager_Chat = ParamsManager(Path_Config_Chat)
 
-        '''
-        self.setWindowTitle('PromptTest Client')
-        self.setWindowIcon(QIcon(QFunc.NormPath(Path(CurrentDir).joinpath('icon.png'))))
-        '''
+        # Logo
+        self.setWindowIcon(QIcon(QFunc.NormPath(Path(CurrentDir).joinpath('assets/images/Logo.ico'))))
 
         # Theme toggler
         ComponentsSignals.Signal_SetTheme.connect(
@@ -573,11 +571,7 @@ class MainWindow(Window_MainWindow):
         self.ui.ComboBox_Type.addItems(['gpt', 'assistant'])
         self.ui.ComboBox_Type.currentTextChanged.connect(
             lambda Text: (
-                self.ui.Label_Model.setVisible(Text == 'gpt'),
-                self.ui.ComboBox_Model.setVisible(Text == 'gpt'),
-                self.ui.Label_Role.setVisible(Text == 'gpt'),
-                self.ui.ComboBox_Role.setVisible(Text == 'gpt'),
-                self.ui.Button_ManageRole.setVisible(Text == 'gpt')
+                self.ui.StackedWidget_TypeParams.setCurrentIndex(0 if Text == 'gpt' else 1),
             )
         )
         ParamsManager_Chat.SetParam(
@@ -588,7 +582,7 @@ class MainWindow(Window_MainWindow):
         )
 
         self.ui.Label_Model.setText("模型")
-        self.ui.ComboBox_Model.addItems(['gpt-4o', 'dall-e3'])
+        self.ui.ComboBox_Model.addItems(['gpt-4o', 'gemini-1.5-pro-001', 'dall-e3'])
         ParamsManager_Chat.SetParam(
             Widget = self.ui.ComboBox_Model,
             Section = 'Input Params',
@@ -604,6 +598,17 @@ class MainWindow(Window_MainWindow):
             Section = 'Input Params',
             Option = 'Role',
             DefaultValue = "无"
+        )
+
+        self.ui.Label_AssistantID.setText("ID")
+        self.ui.LineEdit_AssistantID.RemoveFileDialogButton()
+        ParamsManager_Chat.SetParam(
+            Widget = self.ui.LineEdit_AssistantID,
+            Section = 'Input Params',
+            Option = 'AssistantID',
+            DefaultValue = '3096d6308eba4aeaab1aabed286ce210',
+            SetPlaceholderText = True,
+            PlaceholderText = "Please enter the assistant's ID"
         )
 
         self.ui.Button_ManageRole.setText("")
@@ -662,6 +667,9 @@ class MainWindow(Window_MainWindow):
 
 if __name__ == '__main__':
     App = QApplication(sys.argv)
+
+    SC = QSplashScreen(QPixmap(QFunc.NormPath(Path(CurrentDir).joinpath('assets/images/others/SplashScreen.png'))))
+    SC.show()
 
     window = MainWindow()
     window.Main()

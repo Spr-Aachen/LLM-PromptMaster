@@ -223,7 +223,8 @@ class AssistantClient(object):
             XHeaderTenant = self.XHeaderTenant,
             assistantCode = self.AssistantCode,
             messages = messages,
-            options = options
+            options = options,
+            stream = False # There seems to be some problem with the assistant
         ):
             yield json.dumps(
                 {"code": statuscode, "message": "成功" if statuscode == 200 else "失败", "data": result}
@@ -257,7 +258,8 @@ class AssistantClient(object):
             assistantCode = self.AssistantCode,
             messages = messages,
             options = options,
-            TotalTestTimes = testTimes
+            TotalTestTimes = testTimes,
+            stream = True
         ):
             yield json.dumps(
                {"code": statuscode, "message": "成功" if statuscode == 200 else "失败", "data": result}

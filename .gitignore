@@ -1,23 +1,24 @@
-# 
-**/__pycache__/
-**/*.ipynb
-
-# 
+# Frontend
 **/*.ui
 **/*.ts
 **/*.qm
 **/*.qrc
 **/*.png
-
-# 
-**/*venv/
 **/*.ico
-**/*MANIFEST.in
-**/*Setup.py
+**/*.ipynb
 
-#
+# Backend
 **/sql/
 
 # Frontend&Backend generated files
 **/TestResult.json
 **/Profile/
+
+# Generated contents
+**/__pycache__/
+**/build/
+**/dist/
+**/Config/
+
+# Others
+**/*venv/

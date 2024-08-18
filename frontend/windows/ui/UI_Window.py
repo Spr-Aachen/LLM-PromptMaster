@@ -60,10 +60,10 @@ class Ui_Window(object):
 "	background-color: rgba(255, 255, 255, 24);\n"
 "}\n"
 "QCheckBox::indicator:unchecked {\n"
-"	border-image: url(:/CheckBox_Icon/images/Moon.png);\n"
+"	border-image: url(:/CheckBox_Icon/images/icons/Moon.png);\n"
 "}\n"
 "QCheckBox::indicator:checked {\n"
-"	border-image: url(:/CheckBox_Icon/images/Sun.png);\n"
+"	border-image: url(:/CheckBox_Icon/images/icons/Sun.png);\n"
 "}")
 
         self.horizontalLayout_11.addWidget(self.CheckBox_SwitchTheme)
@@ -76,63 +76,27 @@ class Ui_Window(object):
         self.horizontalLayout_12.setSpacing(0)
         self.horizontalLayout_12.setObjectName(u"horizontalLayout_12")
         self.horizontalLayout_12.setContentsMargins(0, 0, 0, 0)
-        self.Button_Minimize_Window = QPushButton(self.Frame_Top_Control_Window)
+        self.Button_Minimize_Window = ButtonBase(self.Frame_Top_Control_Window)
         self.Button_Minimize_Window.setObjectName(u"Button_Minimize_Window")
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.Button_Minimize_Window.sizePolicy().hasHeightForWidth())
         self.Button_Minimize_Window.setSizePolicy(sizePolicy)
-        self.Button_Minimize_Window.setStyleSheet(u"QPushButton {\n"
-"	image: url(:/Button_Icon/images/Dash.png);\n"
-"	background-color: transparent;\n"
-"	padding: 6.6px;\n"
-"	border-width: 0px;\n"
-"	border-radius: 0px;\n"
-"	border-style: solid;\n"
-"	border-color: transparent;\n"
-"}\n"
-"QPushButton:hover {\n"
-"	background-color: rgba(123, 123, 123, 123);\n"
-"}")
 
         self.horizontalLayout_12.addWidget(self.Button_Minimize_Window)
 
-        self.Button_Maximize_Window = QPushButton(self.Frame_Top_Control_Window)
+        self.Button_Maximize_Window = ButtonBase(self.Frame_Top_Control_Window)
         self.Button_Maximize_Window.setObjectName(u"Button_Maximize_Window")
         sizePolicy.setHeightForWidth(self.Button_Maximize_Window.sizePolicy().hasHeightForWidth())
         self.Button_Maximize_Window.setSizePolicy(sizePolicy)
-        self.Button_Maximize_Window.setStyleSheet(u"QPushButton {\n"
-"	image: url(:/Button_Icon/images/FullScreen.png);\n"
-"	background-color: transparent;\n"
-"	padding: 6.6px;\n"
-"	border-width: 0px;\n"
-"	border-radius: 0px;\n"
-"	border-style: solid;\n"
-"	border-color: transparent;\n"
-"}\n"
-"QPushButton:hover {\n"
-"	background-color: rgba(123, 123, 123, 123);\n"
-"}")
 
         self.horizontalLayout_12.addWidget(self.Button_Maximize_Window)
 
-        self.Button_Close_Window = QPushButton(self.Frame_Top_Control_Window)
+        self.Button_Close_Window = ButtonBase(self.Frame_Top_Control_Window)
         self.Button_Close_Window.setObjectName(u"Button_Close_Window")
         sizePolicy.setHeightForWidth(self.Button_Close_Window.sizePolicy().hasHeightForWidth())
         self.Button_Close_Window.setSizePolicy(sizePolicy)
-        self.Button_Close_Window.setStyleSheet(u"QPushButton {\n"
-"	image: url(:/Button_Icon/images/X.png);\n"
-"	background-color: transparent;\n"
-"	padding: 6.6px;\n"
-"	border-width: 0px;\n"
-"	border-radius: 0px;\n"
-"	border-style: solid;\n"
-"	border-color: transparent;\n"
-"}\n"
-"QPushButton:hover {\n"
-"	background-color: rgba(210, 123, 123, 210);\n"
-"}")
 
         self.horizontalLayout_12.addWidget(self.Button_Close_Window)
 
@@ -153,33 +117,18 @@ class Ui_Window(object):
         self.gridLayout_2.setContentsMargins(12, 0, 12, 12)
         self.ToolBox = ToolBoxBase(self.Content)
         self.ToolBox.setObjectName(u"ToolBox")
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        sizePolicy1.setHorizontalStretch(0)
+        sizePolicy1.setVerticalStretch(0)
+        sizePolicy1.setHeightForWidth(self.ToolBox.sizePolicy().hasHeightForWidth())
+        self.ToolBox.setSizePolicy(sizePolicy1)
         self.ToolPage = WidgetBase()
         self.ToolPage.setObjectName(u"ToolPage")
-        self.ToolPage.setGeometry(QRect(0, 0, 824, 128))
+        self.ToolPage.setGeometry(QRect(0, 0, 824, 70))
         self.gridLayout = QGridLayout(self.ToolPage)
         self.gridLayout.setSpacing(12)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setContentsMargins(0, 9, 0, 0)
-        self.Layout_Protocal = QHBoxLayout()
-        self.Layout_Protocal.setObjectName(u"Layout_Protocal")
-        self.Label_Protocal = QLabel(self.ToolPage)
-        self.Label_Protocal.setObjectName(u"Label_Protocal")
-
-        self.Layout_Protocal.addWidget(self.Label_Protocal)
-
-        self.ComboBox_Protocol = ComboBoxBase(self.ToolPage)
-        self.ComboBox_Protocol.setObjectName(u"ComboBox_Protocol")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        sizePolicy1.setHorizontalStretch(0)
-        sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.ComboBox_Protocol.sizePolicy().hasHeightForWidth())
-        self.ComboBox_Protocol.setSizePolicy(sizePolicy1)
-
-        self.Layout_Protocal.addWidget(self.ComboBox_Protocol)
-
-
-        self.gridLayout.addLayout(self.Layout_Protocal, 0, 0, 1, 1)
-
         self.Layout_ip = QHBoxLayout()
         self.Layout_ip.setObjectName(u"Layout_ip")
         self.Label_ip = QLabel(self.ToolPage)
@@ -204,8 +153,11 @@ class Ui_Window(object):
 
         self.SpinBox_port = SpinBoxBase(self.ToolPage)
         self.SpinBox_port.setObjectName(u"SpinBox_port")
-        sizePolicy1.setHeightForWidth(self.SpinBox_port.sizePolicy().hasHeightForWidth())
-        self.SpinBox_port.setSizePolicy(sizePolicy1)
+        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        sizePolicy2.setHorizontalStretch(0)
+        sizePolicy2.setVerticalStretch(0)
+        sizePolicy2.setHeightForWidth(self.SpinBox_port.sizePolicy().hasHeightForWidth())
+        self.SpinBox_port.setSizePolicy(sizePolicy2)
 
         self.Layout_port.addWidget(self.SpinBox_port)
 
@@ -221,57 +173,112 @@ class Ui_Window(object):
 
         self.ComboBox_Type = ComboBoxBase(self.ToolPage)
         self.ComboBox_Type.setObjectName(u"ComboBox_Type")
-        sizePolicy1.setHeightForWidth(self.ComboBox_Type.sizePolicy().hasHeightForWidth())
-        self.ComboBox_Type.setSizePolicy(sizePolicy1)
+        sizePolicy2.setHeightForWidth(self.ComboBox_Type.sizePolicy().hasHeightForWidth())
+        self.ComboBox_Type.setSizePolicy(sizePolicy2)
 
         self.Layout_Type.addWidget(self.ComboBox_Type)
 
 
         self.gridLayout.addLayout(self.Layout_Type, 1, 0, 1, 1)
 
+        self.Layout_Protocal = QHBoxLayout()
+        self.Layout_Protocal.setObjectName(u"Layout_Protocal")
+        self.Label_Protocal = QLabel(self.ToolPage)
+        self.Label_Protocal.setObjectName(u"Label_Protocal")
+
+        self.Layout_Protocal.addWidget(self.Label_Protocal)
+
+        self.ComboBox_Protocol = ComboBoxBase(self.ToolPage)
+        self.ComboBox_Protocol.setObjectName(u"ComboBox_Protocol")
+        sizePolicy2.setHeightForWidth(self.ComboBox_Protocol.sizePolicy().hasHeightForWidth())
+        self.ComboBox_Protocol.setSizePolicy(sizePolicy2)
+
+        self.Layout_Protocal.addWidget(self.ComboBox_Protocol)
+
+
+        self.gridLayout.addLayout(self.Layout_Protocal, 0, 0, 1, 1)
+
+        self.StackedWidget_TypeParams = QStackedWidget(self.ToolPage)
+        self.StackedWidget_TypeParams.setObjectName(u"StackedWidget_TypeParams")
+        self.Page1 = QWidget()
+        self.Page1.setObjectName(u"Page1")
+        self.horizontalLayout = QHBoxLayout(self.Page1)
+        self.horizontalLayout.setSpacing(12)
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
         self.Layout_Model = QHBoxLayout()
         self.Layout_Model.setObjectName(u"Layout_Model")
-        self.Label_Model = QLabel(self.ToolPage)
+        self.Label_Model = QLabel(self.Page1)
         self.Label_Model.setObjectName(u"Label_Model")
 
         self.Layout_Model.addWidget(self.Label_Model)
 
-        self.ComboBox_Model = ComboBoxBase(self.ToolPage)
+        self.ComboBox_Model = ComboBoxBase(self.Page1)
         self.ComboBox_Model.setObjectName(u"ComboBox_Model")
-        sizePolicy1.setHeightForWidth(self.ComboBox_Model.sizePolicy().hasHeightForWidth())
-        self.ComboBox_Model.setSizePolicy(sizePolicy1)
+        sizePolicy2.setHeightForWidth(self.ComboBox_Model.sizePolicy().hasHeightForWidth())
+        self.ComboBox_Model.setSizePolicy(sizePolicy2)
 
         self.Layout_Model.addWidget(self.ComboBox_Model)
 
 
-        self.gridLayout.addLayout(self.Layout_Model, 1, 1, 1, 1)
+        self.horizontalLayout.addLayout(self.Layout_Model)
 
         self.Layout_Role = QHBoxLayout()
         self.Layout_Role.setObjectName(u"Layout_Role")
-        self.Label_Role = QLabel(self.ToolPage)
+        self.Label_Role = QLabel(self.Page1)
         self.Label_Role.setObjectName(u"Label_Role")
 
         self.Layout_Role.addWidget(self.Label_Role)
 
-        self.ComboBox_Role = ComboBoxBase(self.ToolPage)
+        self.ComboBox_Role = ComboBoxBase(self.Page1)
         self.ComboBox_Role.setObjectName(u"ComboBox_Role")
-        sizePolicy1.setHeightForWidth(self.ComboBox_Role.sizePolicy().hasHeightForWidth())
-        self.ComboBox_Role.setSizePolicy(sizePolicy1)
+        sizePolicy2.setHeightForWidth(self.ComboBox_Role.sizePolicy().hasHeightForWidth())
+        self.ComboBox_Role.setSizePolicy(sizePolicy2)
 
         self.Layout_Role.addWidget(self.ComboBox_Role)
 
-        self.Button_ManageRole = ButtonBase(self.ToolPage)
+        self.Button_ManageRole = ButtonBase(self.Page1)
         self.Button_ManageRole.setObjectName(u"Button_ManageRole")
-        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        sizePolicy2.setHorizontalStretch(0)
-        sizePolicy2.setVerticalStretch(0)
-        sizePolicy2.setHeightForWidth(self.Button_ManageRole.sizePolicy().hasHeightForWidth())
-        self.Button_ManageRole.setSizePolicy(sizePolicy2)
+        sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        sizePolicy3.setHorizontalStretch(0)
+        sizePolicy3.setVerticalStretch(0)
+        sizePolicy3.setHeightForWidth(self.Button_ManageRole.sizePolicy().hasHeightForWidth())
+        self.Button_ManageRole.setSizePolicy(sizePolicy3)
 
         self.Layout_Role.addWidget(self.Button_ManageRole)
 
 
-        self.gridLayout.addLayout(self.Layout_Role, 1, 2, 1, 1)
+        self.horizontalLayout.addLayout(self.Layout_Role)
+
+        self.StackedWidget_TypeParams.addWidget(self.Page1)
+        self.Page2 = QWidget()
+        self.Page2.setObjectName(u"Page2")
+        self.horizontalLayout_2 = QHBoxLayout(self.Page2)
+        self.horizontalLayout_2.setSpacing(12)
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        self.horizontalLayout_2.setContentsMargins(0, 0, 0, 0)
+        self.Layout_AssistantID = QHBoxLayout()
+        self.Layout_AssistantID.setObjectName(u"Layout_AssistantID")
+        self.Label_AssistantID = QLabel(self.Page2)
+        self.Label_AssistantID.setObjectName(u"Label_AssistantID")
+
+        self.Layout_AssistantID.addWidget(self.Label_AssistantID)
+
+        self.LineEdit_AssistantID = LineEditBase(self.Page2)
+        self.LineEdit_AssistantID.setObjectName(u"LineEdit_AssistantID")
+
+        self.Layout_AssistantID.addWidget(self.LineEdit_AssistantID)
+
+
+        self.horizontalLayout_2.addLayout(self.Layout_AssistantID)
+
+        self.horizontalSpacer_AssistantID = QSpacerItem(263, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_2.addItem(self.horizontalSpacer_AssistantID)
+
+        self.StackedWidget_TypeParams.addWidget(self.Page2)
+
+        self.gridLayout.addWidget(self.StackedWidget_TypeParams, 1, 1, 1, 2)
 
         self.ToolBox.addItem(self.ToolPage, u"Page 1")
 
@@ -279,11 +286,11 @@ class Ui_Window(object):
 
         self.Content_Left = QWidget(self.Content)
         self.Content_Left.setObjectName(u"Content_Left")
-        sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
-        sizePolicy3.setHorizontalStretch(0)
-        sizePolicy3.setVerticalStretch(0)
-        sizePolicy3.setHeightForWidth(self.Content_Left.sizePolicy().hasHeightForWidth())
-        self.Content_Left.setSizePolicy(sizePolicy3)
+        sizePolicy4 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
+        sizePolicy4.setHorizontalStretch(0)
+        sizePolicy4.setVerticalStretch(0)
+        sizePolicy4.setHeightForWidth(self.Content_Left.sizePolicy().hasHeightForWidth())
+        self.Content_Left.setSizePolicy(sizePolicy4)
         self.Layout_Left = QGridLayout(self.Content_Left)
         self.Layout_Left.setSpacing(12)
         self.Layout_Left.setObjectName(u"Layout_Left")
@@ -421,6 +428,7 @@ class Ui_Window(object):
         self.retranslateUi(Window)
 
         self.ToolBox.setCurrentIndex(0)
+        self.StackedWidget_TypeParams.setCurrentIndex(0)
 
 
         QMetaObject.connectSlotsByName(Window)
@@ -428,13 +436,14 @@ class Ui_Window(object):
 
     def retranslateUi(self, Window):
         Window.setWindowTitle(QCoreApplication.translate("Window", u"Window", None))
-        self.Label_Protocal.setText(QCoreApplication.translate("Window", u"TextLabel", None))
         self.Label_ip.setText(QCoreApplication.translate("Window", u"TextLabel", None))
         self.Label_port.setText(QCoreApplication.translate("Window", u"TextLabel", None))
         self.Label_Type.setText(QCoreApplication.translate("Window", u"TextLabel", None))
+        self.Label_Protocal.setText(QCoreApplication.translate("Window", u"TextLabel", None))
         self.Label_Model.setText(QCoreApplication.translate("Window", u"TextLabel", None))
         self.Label_Role.setText(QCoreApplication.translate("Window", u"TextLabel", None))
         self.Button_ManageRole.setText(QCoreApplication.translate("Window", u"PushButton", None))
+        self.Label_AssistantID.setText(QCoreApplication.translate("Window", u"TextLabel", None))
         self.ToolBox.setItemText(self.ToolBox.indexOf(self.ToolPage), QCoreApplication.translate("Window", u"Page 1", None))
         self.Button_ClearConversations.setText(QCoreApplication.translate("Window", u"PushButton", None))
         self.Button_CreateConversation.setText(QCoreApplication.translate("Window", u"PushButton", None))

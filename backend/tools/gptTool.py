@@ -19,6 +19,8 @@ from sqlalchemy import engine
 ChatURLs_Norm = {
     'gpt-35-turbo': "api/azure/openai/chatCompletion?deploymentId=gpt-35-turbo",
     'gpt-4o': "api/azure/openai/chatCompletion?deploymentId=gpt-4o",
+    'gemini-1.5-pro-001': "api/azure/openai/chatCompletion?deploymentId=gemini-1.5-pro-001",
+    'moonshot-v1-128k': "api/azure/openai/chatCompletion?deploymentId=moonshot-v1-128k",
     'claude-3-5-sonnet@20240620': "api/azure/openai/chatCompletion?deploymentId=claude-3-5-sonnet@20240620",
 }
 
@@ -241,7 +243,8 @@ class GPTClient(object):
             APP_Secret = self.access_key_secret,
             model = model,
             messages = messages,
-            options = options
+            options = options,
+            stream = True
         ):
             yield json.dumps(
                 {"code": statuscode, "message": "成功" if statuscode == 200 else "失败", "data": result}
@@ -279,7 +282,8 @@ class GPTClient(object):
             model = model,
             messages = messages,
             options = options,
-            TotalTestTimes = testTimes
+            TotalTestTimes = testTimes,
+            stream = True
         ):
             yield json.dumps(
                {"code": statuscode, "message": "成功" if statuscode == 200 else "失败", "data": result}
