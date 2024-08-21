@@ -206,7 +206,8 @@ class AssistantClient(object):
         '''
 
     async def run(self,
-        messages: Union[str, list],
+        assistantCode: Optional[str] = None,
+        messages: Union[str, list] = ...,
         options: Optional[dict] = None
     ):
         messages = [
@@ -221,7 +222,7 @@ class AssistantClient(object):
             APP_Secret = self.access_key_secret,
             ChatURL = self.ChatURL,
             XHeaderTenant = self.XHeaderTenant,
-            assistantCode = self.AssistantCode,
+            assistantCode = self.AssistantCode if assistantCode is None else assistantCode,
             messages = messages,
             options = options,
             stream = False # There seems to be some problem with the assistant
@@ -231,7 +232,8 @@ class AssistantClient(object):
             )
 
     async def test(self,
-        messages: Union[str, list],
+        assistantCode: Optional[str] = None,
+        messages: Union[str, list] = ...,
         options: Optional[dict] = None,
         testTimes: Optional[int] = None
     ):
@@ -255,7 +257,7 @@ class AssistantClient(object):
             APP_Secret = self.access_key_secret,
             ChatURL = self.ChatURL,
             XHeaderTenant = self.XHeaderTenant,
-            assistantCode = self.AssistantCode,
+            assistantCode = self.AssistantCode if assistantCode is None else assistantCode,
             messages = messages,
             options = options,
             TotalTestTimes = testTimes,

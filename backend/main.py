@@ -24,6 +24,14 @@ from tools.assistantTool import AssistantClient
 
 ##############################################################################################################################
 
+# 启动参数解析，启动环境，应用端口由命令行传入
+parser = argparse.ArgumentParser()
+parser.add_argument("-e", "--profile", help = "环境启动项", type = str)
+parser.add_argument("-p", "--port",    help = "端口",       type = int)
+args = parser.parse_args()
+
+##############################################################################################################################
+
 class PromptTestTool():
     '''
     '''
@@ -98,12 +106,6 @@ class PromptTestTool():
             return {"message": "Shutting down, bye..."}
 
     def run(self):
-        # 启动参数解析，启动环境，应用端口由命令行传入
-        parser = argparse.ArgumentParser()
-        parser.add_argument("-e", "--profile", help = "环境启动项", type = str)
-        parser.add_argument("-p", "--port",    help = "端口",       type = int)
-        args = parser.parse_args()
-
         CurrentDir = sys.path[0]
         PromptDir = f"{CurrentDir}{os.sep}prompt"
         ConfigPath = f"{CurrentDir}{os.sep}config{os.sep}config-{args.profile.strip()}.ini"
@@ -131,11 +133,11 @@ class PromptTestTool():
             )
 
         @self._app.post("/assistant")
-        async def assistant(request: Request, testtimes: Optional[int] = None):
+        async def assistant(request: Request, code: Optional[str] = None, testtimes: Optional[int] = None):
             reqJs = await request.json()
             message = reqJs.get('message', None)
             options = reqJs.get('options', None)
-            contentstream = assistantClient.run(message, options) if testtimes is None else assistantClient.test(message, options, testtimes)
+            contentstream = assistantClient.run(code, message, options) if testtimes is None else assistantClient.test(code, message, options, testtimes)
             return StreamingResponse(
                 content = contentstream,
                 media_type = "application/json"

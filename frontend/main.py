@@ -23,6 +23,21 @@ from config import CurrentDir, PromptDir, ConversationDir, QuestionDir, ConfigDi
 
 ##############################################################################################################################
 
+# 启动参数解析，启动环境，应用端口由命令行传入
+parser = argparse.ArgumentParser()
+parser.add_argument("--promptdir",       help = "prompt目录", type = str, default = PromptDir)
+parser.add_argument("--conversationdir", help = "对话目录",   type = str, default = ConversationDir)
+parser.add_argument("--questiondir",     help = "问题目录",   type = str, default = QuestionDir)
+parser.add_argument("--configdir",       help = "配置目录",   type = str, default = ConfigDir)
+args = parser.parse_args()
+
+PromptDir = args.promptdir
+ConversationDir = args.conversationdir
+QuestionDir = args.questiondir
+ConfigDir = args.configdir
+
+##############################################################################################################################
+
 def BuildMessageMarkdown(messages: list[dict]):
     markdown = ""
     for message in messages:
@@ -46,6 +61,7 @@ def chatRequest(
     port: Optional[int] = None,
     type: str = 'assistant',
     model: Optional[str] = None,
+    code: Optional[str] = None,
     messages: list[dict] = [{}],
     options: Optional[dict] = None,
     testtimes: Optional[int] = None,
@@ -74,7 +90,7 @@ def chatRequest(
     if type == 'gpt':
         query = f"model={'gpt-4o' if model is None else model}{f'&testtimes={testtimes}' if testtimes is not None else ''}"
     if type == 'assistant':
-        query = f"testtimes={testtimes}" if testtimes is not None else ""
+        query = f"code={'114514' if code is None else code}{f'&testtimes={testtimes}' if testtimes is not None else ''}"
     URL = f"{protocol}://{ip}:{port}/{type}{f'?{query}' if len(query) > 0 else ''}"
     Headers = {
         'Authorization': oauth_token
@@ -127,6 +143,7 @@ class RequestThread(QThread):
         port: Optional[int] = None,
         type: str = 'assistant',
         model: Optional[str] = None,
+        code: Optional[str] = None,
         messages: list[dict] = [{}],
         options: Optional[dict] = None,
         testtimes: Optional[int] = None
@@ -139,6 +156,7 @@ class RequestThread(QThread):
         self.port = port
         self.type = type
         self.model = model
+        self.code = code
         self.messages = messages
         self.options = options
         self.testtimes = testtimes
@@ -151,6 +169,7 @@ class RequestThread(QThread):
             port = self.port,
             type = self.type,
             model = self.model,
+            code = self.code,
             messages = self.messages,
             options = self.options,
             testtimes = self.testtimes
@@ -176,12 +195,12 @@ class MainWindow(Window_MainWindow):
 
     def getRoles(self):
         # Check if the prompt directory exists
-        if not os.path.exists(self.PromptDir):
-            os.makedirs(self.PromptDir)
+        if not os.path.exists(PromptDir):
+            os.makedirs(PromptDir)
         # Initialize roles and add prompt to combobox
-        for HistoryFileName in os.listdir(self.PromptDir):
+        for HistoryFileName in os.listdir(PromptDir):
             if HistoryFileName.endswith('.txt'):
-                HistoryFilePath = Path(self.PromptDir).joinpath(HistoryFileName).as_posix()
+                HistoryFilePath = Path(PromptDir).joinpath(HistoryFileName).as_posix()
                 if os.path.getsize(HistoryFilePath) == 0:
                     os.remove(HistoryFilePath)
                     continue
@@ -207,7 +226,7 @@ class MainWindow(Window_MainWindow):
             self.MessagesDict[ConversationName] = Messages
 
     def manageRole(self):
-        ChildWindow_Prompt = PromptWindow(self, self.PromptDir)
+        ChildWindow_Prompt = PromptWindow(self, PromptDir)
         ChildWindow_Prompt.exec()
         # Update roles
         self.roles = {**{"无": ""}, **ChildWindow_Prompt.PromptDict}
@@ -220,17 +239,17 @@ class MainWindow(Window_MainWindow):
 
     def LoadHistories(self):
         # Check if the conversations directory exists
-        if not os.path.exists(self.ConversationDir):
-            os.makedirs(self.ConversationDir)
+        if not os.path.exists(ConversationDir):
+            os.makedirs(ConversationDir)
         # Check if the questions directory exists
-        if not os.path.exists(self.QuestionDir):
-            os.makedirs(self.QuestionDir)
+        if not os.path.exists(QuestionDir):
+            os.makedirs(QuestionDir)
         # Initialize MessagesDict and add conversations&questions to listwidget
         self.ui.ListWidget_Conversation.clear()
-        for HistoryFileName in os.listdir(self.ConversationDir):
+        for HistoryFileName in os.listdir(ConversationDir):
             if HistoryFileName.endswith('.txt'):
-                ConversationFilePath = Path(self.ConversationDir).joinpath(HistoryFileName).as_posix()
-                QuestionFilePath = Path(self.QuestionDir).joinpath(HistoryFileName).as_posix()
+                ConversationFilePath = Path(ConversationDir).joinpath(HistoryFileName).as_posix()
+                QuestionFilePath = Path(QuestionDir).joinpath(HistoryFileName).as_posix()
                 if os.path.getsize(ConversationFilePath) == 0:
                     os.remove(ConversationFilePath)
                     os.remove(QuestionFilePath) if Path(QuestionFilePath).exists() else None
@@ -244,14 +263,14 @@ class MainWindow(Window_MainWindow):
         # In case the conversation isn't selected
         self.ui.ListWidget_Conversation.setCurrentItem(item) if self.ui.ListWidget_Conversation.currentItem() != item else None
         # Load a conversation from a txt file and display it in the browser
-        self.ConversationFilePath = Path(self.ConversationDir).joinpath(item.text() + '.txt').as_posix()
+        self.ConversationFilePath = Path(ConversationDir).joinpath(item.text() + '.txt').as_posix()
         with open(self.ConversationFilePath, 'r', encoding = 'utf-8') as f:
             Messages = [json.loads(line) for line in f]
         # Build&Set Markdown
         markdown = BuildMessageMarkdown(Messages)
         self.ui.TextBrowser.setMarkdown(markdown)
         # Load a question from the txt file and display it in the input area
-        self.QuestionFilePath = Path(self.QuestionDir).joinpath(item.text() + '.txt').as_posix()
+        self.QuestionFilePath = Path(QuestionDir).joinpath(item.text() + '.txt').as_posix()
         with open(self.QuestionFilePath, 'r', encoding = 'utf-8') as f:
             Question = f.read()
         # Set qustion
@@ -259,8 +278,8 @@ class MainWindow(Window_MainWindow):
 
     def removeHistoryFiles(self, listItem: QStandardItem):
         self.ui.ListWidget_Conversation.takeItem(self.ui.ListWidget_Conversation.row(listItem))
-        os.remove(Path(self.ConversationDir).joinpath(listItem.text() + '.txt').as_posix())
-        os.remove(Path(self.QuestionDir).joinpath(listItem.text() + '.txt').as_posix())
+        os.remove(Path(ConversationDir).joinpath(listItem.text() + '.txt').as_posix())
+        os.remove(Path(QuestionDir).joinpath(listItem.text() + '.txt').as_posix())
 
     def renameConversation(self):
         currentItem = self.ui.ListWidget_Conversation.currentItem()
@@ -271,11 +290,11 @@ class MainWindow(Window_MainWindow):
                 'Enter new conversation name:'
             )
             if ok and new_name:
-                self.ConversationFilePath = Path(self.ConversationDir).joinpath(f"{new_name}.txt").as_posix()
-                os.rename(Path(self.ConversationDir).joinpath(f"{old_name}.txt"), self.ConversationFilePath)
+                self.ConversationFilePath = Path(ConversationDir).joinpath(f"{new_name}.txt").as_posix()
+                os.rename(Path(ConversationDir).joinpath(f"{old_name}.txt"), self.ConversationFilePath)
                 currentItem.setText(new_name)
-                self.QuestionFilePath = Path(self.QuestionDir).joinpath(f"{new_name}.txt").as_posix()
-                os.rename(Path(self.QuestionDir).joinpath(f"{old_name}.txt"), self.QuestionFilePath)
+                self.QuestionFilePath = Path(QuestionDir).joinpath(f"{new_name}.txt").as_posix()
+                os.rename(Path(QuestionDir).joinpath(f"{old_name}.txt"), self.QuestionFilePath)
                 # Transfer&Remove message
                 self.MessagesDict[new_name] = self.MessagesDict[old_name]
                 self.MessagesDict.pop(old_name) # Remove message
@@ -303,13 +322,13 @@ class MainWindow(Window_MainWindow):
         beijing_timezone = pytz.timezone('Asia/Shanghai')
         formatted_time = datetime.now(beijing_timezone).strftime("%Y_%m_%d_%H_%M_%S")
         # Check if the path would be overwritten
-        FilePath = Path(self.ConversationDir).joinpath(f"{formatted_time}.txt")
+        FilePath = Path(ConversationDir).joinpath(f"{formatted_time}.txt")
         FilePath = QFunc.RenameFile(FilePath)
         FileName = Path(FilePath).name
         ConversationName = Path(FilePath).stem
         # Update the history file path and the question file path
         self.ConversationFilePath = FilePath
-        self.QuestionFilePath = Path(self.QuestionDir).joinpath(FileName).as_posix()
+        self.QuestionFilePath = Path(QuestionDir).joinpath(FileName).as_posix()
         # Set the files & browser
         with open(self.ConversationFilePath, 'w', encoding = 'utf-8') as f:
             f.write('')
@@ -409,6 +428,7 @@ class MainWindow(Window_MainWindow):
                 port = self.ui.SpinBox_port.text(),
                 type = self.ui.ComboBox_Type.currentText(),
                 model = self.ui.ComboBox_Model.currentText(),
+                code = self.ui.LineEdit_AssistantID.text(),
                 messages = Messages,
                 options = None,
                 testtimes = TestTimes
@@ -464,21 +484,8 @@ class MainWindow(Window_MainWindow):
         )
 
     def Main(self):
-        # 启动参数解析，启动环境，应用端口由命令行传入
-        parser = argparse.ArgumentParser()
-        parser.add_argument("--promptdir",       help = "prompt目录", type = str, default = PromptDir)
-        parser.add_argument("--conversationdir", help = "对话目录",   type = str, default = ConversationDir)
-        parser.add_argument("--questiondir",     help = "问题目录",   type = str, default = QuestionDir)
-        parser.add_argument("--configdir",       help = "配置目录",   type = str, default = ConfigDir)
-        args = parser.parse_args()
-
-        self.PromptDir = args.promptdir
-        self.ConversationDir = args.conversationdir
-        self.QuestionDir = args.questiondir
-        self.ConfigDir = args.configdir
-
         # Chat - ParamsManager
-        Path_Config_Chat = QFunc.NormPath(Path(self.ConfigDir).joinpath('Config_Chat.ini'))
+        Path_Config_Chat = QFunc.NormPath(Path(ConfigDir).joinpath('Config_Chat.ini'))
         ParamsManager_Chat = ParamsManager(Path_Config_Chat)
 
         # Logo
@@ -606,7 +613,7 @@ class MainWindow(Window_MainWindow):
             Widget = self.ui.LineEdit_AssistantID,
             Section = 'Input Params',
             Option = 'AssistantID',
-            DefaultValue = '3096d6308eba4aeaab1aabed286ce210',
+            DefaultValue = '6b16892979c2487ba5817377e5722acd',
             SetPlaceholderText = True,
             PlaceholderText = "Please enter the assistant's ID"
         )
