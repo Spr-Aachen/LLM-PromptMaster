@@ -222,8 +222,8 @@ class GPTClient(object):
         '''
 
     async def run(self,
-        model: str,
-        messages: Union[str, list],
+        model: str = ...,
+        messages: Union[str, list] = ...,
         options: Optional[dict] = None
     ):
         messages = [
@@ -251,8 +251,8 @@ class GPTClient(object):
             )
 
     async def test(self,
-        model: str,
-        messages: Union[str, list],
+        model: str = ...,
+        messages: Union[str, list] = ...,
         options: Optional[dict] = None,
         testTimes: Optional[int] = None
     ):

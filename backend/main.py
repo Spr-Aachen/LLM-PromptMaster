@@ -62,6 +62,9 @@ class PromptTestTool():
         return self._app
 
     def exception_handler(self):
+        '''
+        异常处理
+        '''
         @self._app.exception_handler(StarletteHTTPException)
         async def http_exception_handler(request: Request, exc: StarletteHTTPException):
             return JSONResponse(
@@ -89,7 +92,7 @@ class PromptTestTool():
 
     def actuator(self):
         '''
-        健康检查接口 + 异常处理
+        健康检查接口
         '''
         @self._app.get("/actuator/health/liveness")
         async def health_liveness():
@@ -104,6 +107,16 @@ class PromptTestTool():
             # 处理优雅关机相关的逻辑
             self.server.should_exit = True
             return {"message": "Shutting down, bye..."}
+
+        @self._app.post("/actuator/reboot")
+        async def health_reboot():
+            uvicorn.run(
+                uvicorn.Config(self._app),
+                host = "localhost",
+                port = args.port,
+                reload = True
+            )
+            return {"message": "Rebooting..."}
 
     def run(self):
         CurrentDir = sys.path[0]

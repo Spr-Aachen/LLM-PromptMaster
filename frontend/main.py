@@ -4,6 +4,7 @@ import os
 import sys
 import argparse
 import json
+import time
 import requests
 import pytz
 from datetime import date, datetime
@@ -121,7 +122,7 @@ def chatRequest(
             yield "Request failed", response.status_code
 
 
-def exitRequest(
+def exitService(
     protocol: str = 'http',
     ip: str = 'localhost',
     port: Optional[int] = None
@@ -175,6 +176,7 @@ class RequestThread(QThread):
             testtimes = self.testtimes
         ):
             self.textReceived.emit(str(result) if statuscode == 200 else "请求失败")
+            time.sleep(0.03)
 
 ##############################################################################################################################
 
@@ -476,8 +478,8 @@ class MainWindow(Window_MainWindow):
             self.createConversation()
             self.ui.TextEdit_Input.setText(Question)
 
-    def ExitRequest(self):
-        exitRequest(
+    def ExitService(self):
+        exitService(
             protocol = self.ui.ComboBox_Protocol.currentText(),
             ip = self.ui.LineEdit_ip.text(),
             port = self.ui.SpinBox_port.text(),
@@ -513,7 +515,7 @@ class MainWindow(Window_MainWindow):
         # Window controling buttons
         self.closed.connect(
             lambda: (
-                #self.ExitRequest(),
+                #self.ExitService(),
                 os._exit(0)
             )
         )
