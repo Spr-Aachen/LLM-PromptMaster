@@ -188,7 +188,7 @@ class MainWindow(Window_MainWindow):
 
     MessagesDict = {}
 
-    thread = None
+    Thread = None
 
     def __init__(self):
         super().__init__()
@@ -418,13 +418,13 @@ class MainWindow(Window_MainWindow):
         blockList(False)
         Messages = self.MessagesDict[ConversationName]
         if InputContent.strip().__len__() > 0:
-            if self.thread is not None and self.thread.isRunning():
-                self.thread.terminate()
-                self.thread.wait()
+            if self.Thread is not None and self.Thread.isRunning():
+                self.Thread.terminate()
+                self.Thread.wait()
             Messages.append({'role': 'user', 'content': InputContent})
             self.MessagesDict[ConversationName] = Messages
             self.updateRecord(ConversationName)
-            self.thread = RequestThread(
+            self.Thread = RequestThread(
                 protocol = self.ui.ComboBox_Protocol.currentText(),
                 ip = self.ui.LineEdit_ip.text(),
                 port = self.ui.SpinBox_port.text(),
@@ -435,9 +435,9 @@ class MainWindow(Window_MainWindow):
                 options = None,
                 testtimes = TestTimes
             )
-            self.thread.textReceived.connect(lambda text: self.recieveAnswer(text, ConversationName))
-            self.thread.textReceived.connect(lambda: blockList(True))
-            self.thread.start()
+            self.Thread.textReceived.connect(lambda text: self.recieveAnswer(text, ConversationName))
+            self.Thread.textReceived.connect(lambda: blockList(True))
+            self.Thread.start()
 
     def Query(self):
         InputContent = self.ui.TextEdit_Input.toPlainText()
@@ -446,6 +446,7 @@ class MainWindow(Window_MainWindow):
         self.startThread(InputContent, ConversationName)
         self.ui.TextEdit_Input.clear()
         self.ui.TextEdit_Input.setFocus()
+        self.ui.StackedWidget_SendAndStop.setCurrentWidget(self.ui.StackedWidgetPage_Stop)
 
     def QueryTest(self):
         InputContent = self.ui.TextEdit_Input.toPlainText()
@@ -469,6 +470,7 @@ class MainWindow(Window_MainWindow):
         self.startThread(InputContent, ConversationName, int(TotalTestTimes))
         self.ui.TextEdit_Input.clear()
         self.ui.TextEdit_Input.setFocus()
+        self.ui.StackedWidget_SendAndStop.setCurrentWidget(self.ui.Button_Stop)
 
     def LoadQuestions(self):
         ChildWindow_Test = TestWindow(self)
@@ -484,6 +486,12 @@ class MainWindow(Window_MainWindow):
             ip = self.ui.LineEdit_ip.text(),
             port = self.ui.SpinBox_port.text(),
         )
+
+    def StopService(self):
+        if self.Thread is not None and self.Thread.isRunning():
+            self.Thread.terminate()
+            self.Thread.wait()
+        self.ui.StackedWidget_SendAndStop.setCurrentWidget(self.ui.StackedWidgetPage_Send)
 
     def Main(self):
         # Chat - ParamsManager
@@ -640,6 +648,9 @@ class MainWindow(Window_MainWindow):
 
         self.ui.Button_Send.setText('发送')
         self.ui.Button_Send.clicked.connect(self.Query)
+
+        self.ui.Button_Stop.setText('停止')
+        self.ui.Button_Stop.clicked.connect(self.StopService)
 
         self.ui.Button_Test.setText('测试')
         self.ui.Button_Test.clicked.connect(self.QueryTest)

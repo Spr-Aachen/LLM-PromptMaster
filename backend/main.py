@@ -108,16 +108,6 @@ class PromptTestTool():
             self.server.should_exit = True
             return {"message": "Shutting down, bye..."}
 
-        @self._app.post("/actuator/reboot")
-        async def health_reboot():
-            uvicorn.run(
-                uvicorn.Config(self._app),
-                host = "localhost",
-                port = args.port,
-                reload = True
-            )
-            return {"message": "Rebooting..."}
-
     def run(self):
         CurrentDir = sys.path[0]
         PromptDir = f"{CurrentDir}{os.sep}prompt"

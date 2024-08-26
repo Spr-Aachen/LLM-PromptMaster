@@ -3,126 +3,29 @@ Assistant工具类
 """
 
 import configparser
-import requests
 import json
+import threading
 import pandas
 import jaydebeapi
-import requests.adapters
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from pathlib import Path
 from typing import Optional, Union
 from sqlalchemy import engine
 
-from tools.gptTool import IntranetGPTRequest
+from utils.request import IntranetGPTRequest, IntranetAssistantRequest
 
 ##############################################################################################################################
 
-def IntranetAssistantRequest(
-    PFGateway: str = ...,
-    APP_ID: Optional[str] = None,
-    APP_Secret: str = ...,
-    ChatURL: str = ...,
-    XHeaderTenant: str = ...,
-    assistantCode: str = ...,
-    messages: list = [{}],
-    options: Optional[dict] = None,
-    stream: bool = True
-):
-    # 初始化会话
-    session = requests.session()
-    session.keep_alive = False
-    session.mount('http://', requests.adapters.HTTPAdapter(max_retries = 3))
-    session.mount('https://', requests.adapters.HTTPAdapter(max_retries = 3))
-    # 获取令牌
-    url = f"{PFGateway}/service-pf-open-gateway/oauth/token?grant_type=client_credentials&client_id={APP_ID}&client_secret={APP_Secret}"
-    response = requests.get(
-        url = url
-    )
-    if response.status_code == 200:
-        res_token = response.json()
-        accessToken = res_token.get("data", {}).get("access_token", "")
-        oauth_token = f"Bearer {accessToken}"
-    else:
-        yield "Request failed", response.status_code
-    # 请求智库接口
-    url = f"{PFGateway}/{ChatURL}/{assistantCode}"
-    Headers = {
-        'Content-Type': 'application/json',
-        'x-header-tenant': XHeaderTenant,
-        'Authorization': oauth_token
-    }
-    Payload = {
-        'messages': messages,
-        'options': options
-    } if options is not None else {
-        'messages': messages
-    }
-    with requests.post(
-        url = url if not stream else url.replace('/chat', '/streamChat'),
-        headers = Headers,
-        data = json.dumps(Payload),
-        stream = stream
-    ) as response:
-        if response.status_code == 200:
-            for chunk in response.iter_content(chunk_size = 1024 if stream else None, decode_unicode = False):
-                if chunk:
-                    buffer = chunk.decode('utf-8', errors = 'ignore')
-                    '''
-                    if stream:
-                        buffer = "".join(line[len("data:"):] if line.startswith("data:") else line for line in buffer.splitlines()) # remove all the 'data:' suffix
-                    '''
-                    try:
-                        parsed_content = json.loads(buffer)
-                        #print('buffer successfully parsed:\n', buffer)
-                        try:
-                            result = parsed_content['data']['data']['choices'][0]['message']['content']
-                        except:
-                            result = parsed_content['data']['dataContent']
-                        yield result, response.status_code
-                    except:
-                        #print('failed to load buffer:\n', buffer)
-                        continue
-        else:
-            yield "Request failed", response.status_code
+similarity_matrix = None
 
-
-def AssistantPromptTest(
-    PFGateway: str = ...,
-    GPTGateway: str = ...,
-    APP_ID: Optional[str] = None,
-    APP_Secret: str = ...,
-    ChatURL: str = ...,
-    XHeaderTenant: str = ...,
-    assistantCode: str = ...,
+def ComputeSimilarity(
+    Answers: list,
     messages: list = [{}],
-    options: Optional[dict] = None,
-    stream: bool = True,
     TotalTestTimes: Optional[int] = None,
     sqlConnection: Optional[Union[engine.Engine, engine.Connection, jaydebeapi.Connection]] = None
 ):
-    # Test the assistant
-    if TotalTestTimes is not None:
-        assert TotalTestTimes > 0, 'Incorrect number!'
-    else:
-        yield
-    CurrentTestTime = 1
-    Answers = []
-    while CurrentTestTime <= TotalTestTimes:
-        print('Current test time:', CurrentTestTime)
-        for result, statuscode in IntranetAssistantRequest(
-            PFGateway = PFGateway,
-            APP_ID = APP_ID,
-            APP_Secret = APP_Secret,
-            ChatURL = ChatURL,
-            XHeaderTenant = XHeaderTenant,
-            assistantCode = assistantCode,
-            messages = messages,
-            options = options,
-            stream = False
-        ): # This iteration would be only executed for once since the stream option is set to false
-            Answers.append(result)
-        CurrentTestTime += 1
+    global similarity_matrix
 
     # Compute the similarity matrix
     tfidf_vectorizer = TfidfVectorizer()
@@ -156,6 +59,53 @@ def AssistantPromptTest(
             if_exists = 'replace'
         )
         sqlConnection.close()
+
+
+def AssistantPromptTest(
+    PFGateway: str = ...,
+    GPTGateway: str = ...,
+    APP_ID: Optional[str] = None,
+    APP_Secret: str = ...,
+    ChatURL: str = ...,
+    XHeaderTenant: str = ...,
+    assistantCode: str = ...,
+    messages: list = [{}],
+    options: Optional[dict] = None,
+    stream: bool = True,
+    TotalTestTimes: Optional[int] = None,
+    sqlConnection: Optional[Union[engine.Engine, engine.Connection, jaydebeapi.Connection]] = None
+):
+    global similarity_matrix
+
+    # Test the assistant
+    if TotalTestTimes is not None:
+        assert TotalTestTimes > 0, 'Incorrect number!'
+    else:
+        yield
+    CurrentTestTime = 1
+    Answers = []
+    while CurrentTestTime <= TotalTestTimes:
+        print('Current test time:', CurrentTestTime)
+        for result, statuscode in IntranetAssistantRequest(
+            PFGateway = PFGateway,
+            APP_ID = APP_ID,
+            APP_Secret = APP_Secret,
+            ChatURL = ChatURL,
+            XHeaderTenant = XHeaderTenant,
+            assistantCode = assistantCode,
+            messages = messages,
+            options = options,
+            stream = False
+        ): # This iteration would be only executed for once since the stream option is set to false
+            Answers.append(result)
+        CurrentTestTime += 1
+
+    # Compute the test results' similarity
+    recordingThread = threading.Thread(
+        target = ComputeSimilarity,
+        args = (Answers, messages, TotalTestTimes, sqlConnection)
+    )
+    recordingThread.start()
 
     # Analyze the test result
     '''

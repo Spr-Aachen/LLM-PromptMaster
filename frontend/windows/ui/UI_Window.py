@@ -343,6 +343,23 @@ class Ui_Window(object):
         self.Layout_Right.setSpacing(12)
         self.Layout_Right.setObjectName(u"Layout_Right")
         self.Layout_Right.setContentsMargins(0, 0, 0, 0)
+        self.Button_Load = QPushButton(self.Content_Right)
+        self.Button_Load.setObjectName(u"Button_Load")
+        self.Button_Load.setStyleSheet(u"QPushButton {\n"
+"	text-align: center;\n"
+"	font-size: 12px;\n"
+"	background-color: transparent;\n"
+"	padding: 6.6px;\n"
+"	border-width: 1.2px;\n"
+"	border-style: solid;\n"
+"	border-color: rgb(90, 90, 90);\n"
+"}\n"
+"QPushButton:hover {\n"
+"	border-color: rgb(120, 120, 120);\n"
+"}")
+
+        self.Layout_Right.addWidget(self.Button_Load, 1, 0, 1, 2)
+
         self.splitter = QSplitter(self.Content_Right)
         self.splitter.setObjectName(u"splitter")
         self.splitter.setStyleSheet(u"QSplitter {\n"
@@ -367,40 +384,6 @@ class Ui_Window(object):
 
         self.Layout_Right.addWidget(self.splitter, 0, 0, 1, 2)
 
-        self.Button_Load = QPushButton(self.Content_Right)
-        self.Button_Load.setObjectName(u"Button_Load")
-        self.Button_Load.setStyleSheet(u"QPushButton {\n"
-"	text-align: center;\n"
-"	font-size: 12px;\n"
-"	background-color: transparent;\n"
-"	padding: 6.6px;\n"
-"	border-width: 1.2px;\n"
-"	border-style: solid;\n"
-"	border-color: rgb(90, 90, 90);\n"
-"}\n"
-"QPushButton:hover {\n"
-"	border-color: rgb(120, 120, 120);\n"
-"}")
-
-        self.Layout_Right.addWidget(self.Button_Load, 1, 0, 1, 2)
-
-        self.Button_Send = QPushButton(self.Content_Right)
-        self.Button_Send.setObjectName(u"Button_Send")
-        self.Button_Send.setStyleSheet(u"QPushButton {\n"
-"	text-align: center;\n"
-"	font-size: 12px;\n"
-"	background-color: transparent;\n"
-"	padding: 6.6px;\n"
-"	border-width: 1.2px;\n"
-"	border-style: solid;\n"
-"	border-color: rgb(90, 90, 90);\n"
-"}\n"
-"QPushButton:hover {\n"
-"	border-color: rgb(120, 120, 120);\n"
-"}")
-
-        self.Layout_Right.addWidget(self.Button_Send, 2, 0, 1, 1)
-
         self.Button_Test = QPushButton(self.Content_Right)
         self.Button_Test.setObjectName(u"Button_Test")
         self.Button_Test.setStyleSheet(u"QPushButton {\n"
@@ -416,7 +399,62 @@ class Ui_Window(object):
 "	border-color: rgb(120, 120, 120);\n"
 "}")
 
-        self.Layout_Right.addWidget(self.Button_Test, 2, 1, 1, 1)
+        self.Layout_Right.addWidget(self.Button_Test, 3, 1, 1, 1)
+
+        self.StackedWidget_SendAndStop = QStackedWidget(self.Content_Right)
+        self.StackedWidget_SendAndStop.setObjectName(u"StackedWidget_SendAndStop")
+        sizePolicy1.setHeightForWidth(self.StackedWidget_SendAndStop.sizePolicy().hasHeightForWidth())
+        self.StackedWidget_SendAndStop.setSizePolicy(sizePolicy1)
+        self.StackedWidgetPage_Send = QWidget()
+        self.StackedWidgetPage_Send.setObjectName(u"StackedWidgetPage_Send")
+        self.gridLayout_3 = QGridLayout(self.StackedWidgetPage_Send)
+        self.gridLayout_3.setSpacing(0)
+        self.gridLayout_3.setObjectName(u"gridLayout_3")
+        self.gridLayout_3.setContentsMargins(0, 0, 0, 0)
+        self.Button_Send = QPushButton(self.StackedWidgetPage_Send)
+        self.Button_Send.setObjectName(u"Button_Send")
+        self.Button_Send.setStyleSheet(u"QPushButton {\n"
+"	text-align: center;\n"
+"	font-size: 12px;\n"
+"	background-color: transparent;\n"
+"	padding: 6.6px;\n"
+"	border-width: 1.2px;\n"
+"	border-style: solid;\n"
+"	border-color: rgb(90, 90, 90);\n"
+"}\n"
+"QPushButton:hover {\n"
+"	border-color: rgb(120, 120, 120);\n"
+"}")
+
+        self.gridLayout_3.addWidget(self.Button_Send, 0, 0, 1, 1)
+
+        self.StackedWidget_SendAndStop.addWidget(self.StackedWidgetPage_Send)
+        self.StackedWidgetPage_Stop = QWidget()
+        self.StackedWidgetPage_Stop.setObjectName(u"StackedWidgetPage_Stop")
+        self.gridLayout_4 = QGridLayout(self.StackedWidgetPage_Stop)
+        self.gridLayout_4.setSpacing(0)
+        self.gridLayout_4.setObjectName(u"gridLayout_4")
+        self.gridLayout_4.setContentsMargins(0, 0, 0, 0)
+        self.Button_Stop = QPushButton(self.StackedWidgetPage_Stop)
+        self.Button_Stop.setObjectName(u"Button_Stop")
+        self.Button_Stop.setStyleSheet(u"QPushButton {\n"
+"	text-align: center;\n"
+"	font-size: 12px;\n"
+"	background-color: transparent;\n"
+"	padding: 6.6px;\n"
+"	border-width: 1.2px;\n"
+"	border-style: solid;\n"
+"	border-color: rgb(90, 90, 90);\n"
+"}\n"
+"QPushButton:hover {\n"
+"	border-color: rgb(120, 120, 120);\n"
+"}")
+
+        self.gridLayout_4.addWidget(self.Button_Stop, 0, 0, 1, 1)
+
+        self.StackedWidget_SendAndStop.addWidget(self.StackedWidgetPage_Stop)
+
+        self.Layout_Right.addWidget(self.StackedWidget_SendAndStop, 3, 0, 1, 1)
 
 
         self.gridLayout_2.addWidget(self.Content_Right, 1, 1, 1, 1)
@@ -429,6 +467,7 @@ class Ui_Window(object):
 
         self.ToolBox.setCurrentIndex(0)
         self.StackedWidget_TypeParams.setCurrentIndex(0)
+        self.StackedWidget_SendAndStop.setCurrentIndex(0)
 
 
         QMetaObject.connectSlotsByName(Window)
@@ -448,6 +487,7 @@ class Ui_Window(object):
         self.Button_ClearConversations.setText(QCoreApplication.translate("Window", u"PushButton", None))
         self.Button_CreateConversation.setText(QCoreApplication.translate("Window", u"PushButton", None))
         self.Button_Load.setText(QCoreApplication.translate("Window", u"PushButton", None))
-        self.Button_Send.setText(QCoreApplication.translate("Window", u"PushButton", None))
         self.Button_Test.setText(QCoreApplication.translate("Window", u"PushButton", None))
+        self.Button_Send.setText(QCoreApplication.translate("Window", u"PushButton", None))
+        self.Button_Stop.setText(QCoreApplication.translate("Window", u"PushButton", None))
     # retranslateUi
