@@ -325,7 +325,7 @@ class MainWindow(Window_MainWindow):
         formatted_time = datetime.now(beijing_timezone).strftime("%Y_%m_%d_%H_%M_%S")
         # Check if the path would be overwritten
         FilePath = Path(ConversationDir).joinpath(f"{formatted_time}.txt")
-        FilePath = QFunc.RenameFile(FilePath)
+        FilePath = QFunc.RenameIfExists(FilePath)
         FileName = Path(FilePath).name
         ConversationName = Path(FilePath).stem
         # Update the history file path and the question file path
@@ -417,30 +417,31 @@ class MainWindow(Window_MainWindow):
             self.ui.TextEdit_Input.blockKeyEnter(block)
         blockList(False)
         Messages = self.MessagesDict[ConversationName]
-        if InputContent.strip().__len__() > 0:
-            if self.Thread is not None and self.Thread.isRunning():
-                self.Thread.terminate()
-                self.Thread.wait()
-            Messages.append({'role': 'user', 'content': InputContent})
-            self.MessagesDict[ConversationName] = Messages
-            self.updateRecord(ConversationName)
-            self.Thread = RequestThread(
-                protocol = self.ui.ComboBox_Protocol.currentText(),
-                ip = self.ui.LineEdit_ip.text(),
-                port = self.ui.SpinBox_port.text(),
-                type = self.ui.ComboBox_Type.currentText(),
-                model = self.ui.ComboBox_Model.currentText(),
-                code = self.ui.LineEdit_AssistantID.text(),
-                messages = Messages,
-                options = None,
-                testtimes = TestTimes
-            )
-            self.Thread.textReceived.connect(lambda text: self.recieveAnswer(text, ConversationName))
-            self.Thread.textReceived.connect(lambda: blockList(True))
-            self.Thread.start()
+        if self.Thread is not None and self.Thread.isRunning():
+            self.Thread.terminate()
+            self.Thread.wait()
+        Messages.append({'role': 'user', 'content': InputContent})
+        self.MessagesDict[ConversationName] = Messages
+        self.updateRecord(ConversationName)
+        self.Thread = RequestThread(
+            protocol = self.ui.ComboBox_Protocol.currentText(),
+            ip = self.ui.LineEdit_ip.text(),
+            port = self.ui.SpinBox_port.text(),
+            type = self.ui.ComboBox_Type.currentText(),
+            model = self.ui.ComboBox_Model.currentText(),
+            code = self.ui.LineEdit_AssistantID.text(),
+            messages = Messages,
+            options = None,
+            testtimes = TestTimes
+        )
+        self.Thread.textReceived.connect(lambda text: self.recieveAnswer(text, ConversationName))
+        self.Thread.textReceived.connect(lambda: blockList(True))
+        self.Thread.start()
 
     def Query(self):
         InputContent = self.ui.TextEdit_Input.toPlainText()
+        if InputContent.strip().__len__() == 0:
+            return
         self.createConversation() if self.ui.ListWidget_Conversation.count() == 0 else None
         ConversationName = self.ui.ListWidget_Conversation.currentItem().text()
         self.startThread(InputContent, ConversationName)
@@ -450,6 +451,8 @@ class MainWindow(Window_MainWindow):
 
     def QueryTest(self):
         InputContent = self.ui.TextEdit_Input.toPlainText()
+        if InputContent.strip().__len__() == 0:
+            return
         self.createConversation() if self.ui.ListWidget_Conversation.count() == 0 else None
         ConversationName = self.ui.ListWidget_Conversation.currentItem().text()
         TotalTestTimes, ok = InputDialogBase.getText(self,
