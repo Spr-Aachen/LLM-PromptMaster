@@ -6,6 +6,7 @@ import configparser
 import json
 import threading
 import pandas
+import numpy
 import jaydebeapi
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -17,7 +18,7 @@ from utils.request import IntranetGPTRequest, IntranetAssistantRequest
 
 ##############################################################################################################################
 
-similarity_matrix = None
+average_similarity = None
 
 def ComputeSimilarity(
     Answers: list,
@@ -25,20 +26,23 @@ def ComputeSimilarity(
     TotalTestTimes: Optional[int] = None,
     sqlConnection: Optional[Union[engine.Engine, engine.Connection, jaydebeapi.Connection]] = None
 ):
-    global similarity_matrix
+    global average_similarity
 
     # Compute the similarity matrix
     tfidf_vectorizer = TfidfVectorizer()
     tfidf_matrix = tfidf_vectorizer.fit_transform(Answers) # Transfer data into TF-IDF vector
     similarity_matrix = cosine_similarity(tfidf_matrix) # Compute cosine similarity of the matrix
-    print(f'The similarity matrix is:\n{similarity_matrix}')
+    # Compute the average similarity
+    num_of_elements = similarity_matrix.shape[0] * similarity_matrix.shape[1] - similarity_matrix.shape[0]
+    sum_of_similarity = numpy.sum(similarity_matrix) - numpy.sum(numpy.diagonal(similarity_matrix))
+    average_similarity = sum_of_similarity / num_of_elements
 
     # Save the test result
     TestResult = {
         'CodeInput': [messages[0]['content']],
         'Answer': [Answers[0]],
         'TestTimes': TotalTestTimes,
-        'SimilarityMatrix': [similarity_matrix]
+        'Similarity': [average_similarity]
     }
     TestResultDF = pandas.DataFrame(TestResult)
     jsonPath = './TestResult.json'
@@ -75,13 +79,13 @@ def AssistantPromptTest(
     TotalTestTimes: Optional[int] = None,
     sqlConnection: Optional[Union[engine.Engine, engine.Connection, jaydebeapi.Connection]] = None
 ):
-    global similarity_matrix
+    global average_similarity
 
     # Test the assistant
     if TotalTestTimes is not None:
         assert TotalTestTimes > 0, 'Incorrect number!'
     else:
-        yield
+        return
     CurrentTestTime = 1
     Answers = []
     while CurrentTestTime <= TotalTestTimes:
@@ -108,10 +112,6 @@ def AssistantPromptTest(
     recordingThread.start()
 
     # Analyze the test result
-    '''
-    with open(jsonPath, 'r', encoding = 'utf-8') as f:
-        result, statuscode = json.load(f), 200
-    '''
     for result, statuscode in IntranetGPTRequest(
         PFGateway = PFGateway,
         GPTGateway = GPTGateway,
@@ -122,7 +122,7 @@ def AssistantPromptTest(
             {
                 'role': "user",
                 'content': f"""
-                    请分析以下测试结果的相似性（若最后一个结果不完整则直接将其忽略），要求在进行详细分析前先计算总体的相似度百分比：
+                    列表中包含了针对同一问题的多个返回值，请分析它们的总体稳定性（若最后一个返回值不完整则直接将其忽略），要求在进行详细分析前先计算总体的相似度百分比：
                     {Answers}
                 """
             }
@@ -130,7 +130,9 @@ def AssistantPromptTest(
         stream = stream
     ):
         if statuscode != 200:
-            result = f"测试结果分析失败，将为您展示相似性矩阵：\n\n{similarity_matrix}"
+            Stability = average_similarity
+            yield f"本次测试返回值的稳定性分析失败，将使用本次测试返回值的相似度计算结果作为替代", 200
+            result = f"本次测试返回值的稳定性维持在：{Stability}\n\n建议对prompt进行调优"
         yield result, 200
 
 

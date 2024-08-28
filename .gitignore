@@ -18,7 +18,6 @@
 **/__pycache__/
 **/build/
 **/dist/
-**/Config/
 
 # Others
 **/*venv/

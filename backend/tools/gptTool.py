@@ -6,6 +6,7 @@ import configparser
 import json
 import threading
 import pandas
+import numpy
 import jaydebeapi
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -17,7 +18,7 @@ from utils.request import IntranetGPTRequest
 
 ##############################################################################################################################
 
-similarity_matrix = None
+average_similarity = None
 
 def ComputeSimilarity(
     Answers: list,
@@ -25,20 +26,23 @@ def ComputeSimilarity(
     TotalTestTimes: Optional[int] = None,
     sqlConnection: Optional[Union[engine.Engine, engine.Connection, jaydebeapi.Connection]] = None
 ):
-    global similarity_matrix
+    global average_similarity
 
     # Compute the similarity matrix
     tfidf_vectorizer = TfidfVectorizer()
     tfidf_matrix = tfidf_vectorizer.fit_transform(Answers) # Transfer data into TF-IDF vector
     similarity_matrix = cosine_similarity(tfidf_matrix) # Compute cosine similarity of the matrix
-    print(f'The similarity matrix is:\n{similarity_matrix}')
+    # Compute the average similarity
+    num_of_elements = similarity_matrix.shape[0] * similarity_matrix.shape[1] - similarity_matrix.shape[0]
+    sum_of_similarity = numpy.sum(similarity_matrix) - numpy.sum(numpy.diagonal(similarity_matrix))
+    average_similarity = sum_of_similarity / num_of_elements
 
     # Save the test result
     TestResult = {
         'CodeInput': [messages[1]['content']],
         'Answer': [Answers[0]],
         'TestTimes': TotalTestTimes,
-        'SimilarityMatrix': [similarity_matrix]
+        'Similarity': [average_similarity]
     }
     TestResultDF = pandas.DataFrame(TestResult)
     jsonPath = './TestResult.json'
@@ -71,15 +75,17 @@ def GPTPromptTest(
     options: Optional[dict] = None,
     stream: bool = True,
     TotalTestTimes: Optional[int] = None,
+    threashold: float = 0.9,
+    PromptReconstructor: Optional[str] = None,
     sqlConnection: Optional[Union[engine.Engine, engine.Connection, jaydebeapi.Connection]] = None
 ):
-    global similarity_matrix
+    global average_similarity
 
     # Test the GPT model
     if TotalTestTimes is not None:
         assert TotalTestTimes > 0, 'Incorrect number!'
     else:
-        yield
+        return
     CurrentTestTime = 1
     Answers = []
     while CurrentTestTime <= TotalTestTimes:
@@ -105,10 +111,6 @@ def GPTPromptTest(
     recordingThread.start()
 
     # Analyze the test result
-    '''
-    with open(jsonPath, 'r', encoding = 'utf-8') as f:
-        result, statuscode = json.load(f), 200
-    '''
     for result, statuscode in IntranetGPTRequest(
         PFGateway = PFGateway,
         GPTGateway = GPTGateway,
@@ -119,15 +121,48 @@ def GPTPromptTest(
             {
                 'role': "user",
                 'content': f"""
-                    请分析以下测试结果的相似性（若最后一个结果不完整则直接将其忽略），要求在进行详细分析前先计算总体的相似度百分比：
+                    列表中包含了针对同一问题的多个返回值，请计算它们的总体稳定性（若最后一个返回值不完整则直接将其忽略），要求结果为浮点型：
                     {Answers}
                 """
+            }
+        ],
+        stream = False
+    ): # This iteration would be only executed for once since the stream option is set to false
+        try:
+            Stability = float(result)
+        except:
+            Stability = average_similarity
+            yield f"本次测试返回值的稳定性分析失败，将使用本次测试返回值的相似度计算结果作为替代", 200
+        if Stability >= threashold:
+            return f"本次测试返回值的稳定性维持在：{Stability}\n\nprompt无需调优", 200 # Stop iteration if the success rate is higher than threashold
+        elif Stability >= 0:
+            yield f"本次测试返回值的稳定性维持在：{Stability}\n\n建议对prompt进行调优", 200
+
+    # Evaluate the prompt
+    yield "开始prompt调优, please stand by...", 200
+    for Message in messages:
+        if Message['role'] == 'system':
+            Prompt = Message['content']
+    for result, statuscode in IntranetGPTRequest(
+        PFGateway = PFGateway,
+        GPTGateway = GPTGateway,
+        APP_ID = APP_ID,
+        APP_Secret = APP_Secret,
+        model = "gpt-4o",
+        messages = [
+            {
+                'role': "system",
+                'content': PromptReconstructor
+            },
+            {
+                'role': "user",
+                'content': Prompt
             }
         ],
         stream = stream
     ):
         if statuscode != 200:
-            result = f"测试结果分析失败，将为您展示相似性矩阵：\n\n{similarity_matrix}"
+            result = f"prompt调优失败"
         yield result, 200
 
 
@@ -144,6 +179,9 @@ class GPTClient(object):
         self.PromptPath = Path(PromptDir).joinpath(cf.get("Chat-GPT", "PromptFile")).as_posix()
         with open(self.PromptPath, 'r', encoding = 'utf-8') as f:
             self.Prompt = f.read()
+        self.PromptReconstructorPath = Path(PromptDir).joinpath(cf.get("Chat-GPT", "PromptFile_Reconstructor")).as_posix()
+        with open(self.PromptReconstructorPath, 'r', encoding = 'utf-8') as f:
+            self.PromptReconstructor = f.read()
         '''
         self.jarPath = cf.get("Test-SQL", "jarPath")
         self.DriverName = cf.get("Test-SQL", "DriverName")
@@ -214,6 +252,7 @@ class GPTClient(object):
             messages = messages,
             options = options,
             TotalTestTimes = testTimes,
+            PromptReconstructor = self.PromptReconstructor,
             stream = True
         ):
             yield json.dumps(
