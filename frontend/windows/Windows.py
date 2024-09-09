@@ -144,7 +144,7 @@ class PromptWindow(DialogBase):
         if ok and PromptName:
             self.PromptFilePath = Path(self.PromptDir).joinpath(f"{PromptName}.txt").as_posix()
             # Check if the path would be overwritten & Update the history file path
-            self.PromptFilePath = QFunc.RenameFile(self.PromptFilePath)
+            self.PromptFilePath = QFunc.RenameIfExists(self.PromptFilePath)
             PromptName = Path(self.PromptFilePath).stem
             # Set the files & browser
             with open(self.PromptFilePath, 'w', encoding = 'utf-8') as f:

@@ -111,6 +111,7 @@ def GPTPromptTest(
     recordingThread.start()
 
     # Analyze the test result
+    yield "本次测试结果正在分析与计算中，请稍后...\n\n", 200
     for result, statuscode in IntranetGPTRequest(
         PFGateway = PFGateway,
         GPTGateway = GPTGateway,
@@ -132,11 +133,11 @@ def GPTPromptTest(
             Stability = float(result)
         except:
             Stability = average_similarity
-            yield f"本次测试返回值的稳定性分析失败，将使用本次测试返回值的相似度计算结果作为替代", 200
+            yield f"本次测试返回值的稳定性分析失败，将使用本次测试返回值的相似度计算结果作为替代\n\n", 200
         if Stability >= threashold:
-            return f"本次测试返回值的稳定性维持在：{Stability}\n\nprompt无需调优", 200 # Stop iteration if the success rate is higher than threashold
+            return f"本次测试返回值的稳定性维持在：{Stability}\n\nprompt无需调优\n\n", 200 # Stop iteration if the success rate is higher than threashold
         elif Stability >= 0:
-            yield f"本次测试返回值的稳定性维持在：{Stability}\n\n建议对prompt进行调优", 200
+            yield f"本次测试返回值的稳定性维持在：{Stability}\n\n建议对prompt进行调优\n\n", 200
 
     # Evaluate the prompt
     yield "开始prompt调优, please stand by...", 200

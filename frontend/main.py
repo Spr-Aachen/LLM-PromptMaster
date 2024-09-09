@@ -473,7 +473,7 @@ class MainWindow(Window_MainWindow):
         self.startThread(InputContent, ConversationName, int(TotalTestTimes))
         self.ui.TextEdit_Input.clear()
         self.ui.TextEdit_Input.setFocus()
-        self.ui.StackedWidget_SendAndStop.setCurrentWidget(self.ui.Button_Stop)
+        self.ui.StackedWidget_SendAndStop.setCurrentWidget(self.ui.StackedWidgetPage_Stop)
 
     def LoadQuestions(self):
         ChildWindow_Test = TestWindow(self)

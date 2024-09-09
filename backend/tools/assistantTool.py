@@ -112,6 +112,7 @@ def AssistantPromptTest(
     recordingThread.start()
 
     # Analyze the test result
+    yield "本次测试结果正在分析与计算中，请稍后...\n\n", 200
     for result, statuscode in IntranetGPTRequest(
         PFGateway = PFGateway,
         GPTGateway = GPTGateway,
@@ -131,8 +132,8 @@ def AssistantPromptTest(
     ):
         if statuscode != 200:
             Stability = average_similarity
-            yield f"本次测试返回值的稳定性分析失败，将使用本次测试返回值的相似度计算结果作为替代", 200
-            result = f"本次测试返回值的稳定性维持在：{Stability}\n\n建议对prompt进行调优"
+            yield f"本次测试返回值的稳定性分析失败，将使用本次测试返回值的相似度计算结果作为替代\n\n", 200
+            result = f"本次测试返回值的稳定性维持在：{Stability}\n\n建议对prompt进行调优\n\n"
         yield result, 200
 
 
