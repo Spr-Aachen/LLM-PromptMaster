@@ -131,8 +131,9 @@ def AssistantPromptTest(
         stream = stream
     ):
         if statuscode != 200:
-            Stability = average_similarity
             yield f"本次测试返回值的稳定性分析失败，将使用本次测试返回值的相似度计算结果作为替代\n\n", 200
+            recordingThread.join()
+            Stability = average_similarity
             result = f"本次测试返回值的稳定性维持在：{Stability}\n\n建议对prompt进行调优\n\n"
         yield result, 200
 

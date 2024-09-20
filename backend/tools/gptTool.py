@@ -122,7 +122,7 @@ def GPTPromptTest(
             {
                 'role': "user",
                 'content': f"""
-                    列表中包含了针对同一问题的多个返回值，请计算它们的总体稳定性（若最后一个返回值不完整则直接将其忽略），要求结果为浮点型：
+                    下面的列表中包含了针对同一问题的多个返回值，请计算它们的总体稳定性（若最后一个返回值不完整则直接将其忽略），要求结果为浮点型：
                     {Answers}
                 """
             }
@@ -132,15 +132,16 @@ def GPTPromptTest(
         try:
             Stability = float(result)
         except:
-            Stability = average_similarity
             yield f"本次测试返回值的稳定性分析失败，将使用本次测试返回值的相似度计算结果作为替代\n\n", 200
+            recordingThread.join()
+            Stability = average_similarity
         if Stability >= threashold:
             return f"本次测试返回值的稳定性维持在：{Stability}\n\nprompt无需调优\n\n", 200 # Stop iteration if the success rate is higher than threashold
         elif Stability >= 0:
             yield f"本次测试返回值的稳定性维持在：{Stability}\n\n建议对prompt进行调优\n\n", 200
 
     # Evaluate the prompt
-    yield "开始prompt调优, please stand by...", 200
+    yield "开始prompt调优, please stand by...\n\n", 200
     for Message in messages:
         if Message['role'] == 'system':
             Prompt = Message['content']
@@ -149,7 +150,7 @@ def GPTPromptTest(
         GPTGateway = GPTGateway,
         APP_ID = APP_ID,
         APP_Secret = APP_Secret,
-        model = "gpt-4o",
+        model = "claude-3-5-sonnet@20240620",
         messages = [
             {
                 'role': "system",
@@ -157,7 +158,7 @@ def GPTPromptTest(
             },
             {
                 'role': "user",
-                'content': Prompt
+                'content': "```\n%s\n```" % Prompt
             }
         ],
         stream = stream

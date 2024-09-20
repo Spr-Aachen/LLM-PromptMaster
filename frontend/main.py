@@ -400,26 +400,25 @@ class MainWindow(Window_MainWindow):
         self.updateRecord(ConversationName)
 
     def startThread(self, InputContent: str, ConversationName: str, TestTimes: Optional[int] = None):
-        def blockList(block: bool):
-            self.ui.ComboBox_Protocol.setEnabled(block)
-            self.ui.LineEdit_ip.setEnabled(block)
-            self.ui.SpinBox_port.setEnabled(block)
-            self.ui.ComboBox_Type.setEnabled(block)
-            self.ui.ComboBox_Model.setEnabled(block)
-            self.ui.ComboBox_Role.setEnabled(block)
-            self.ui.Button_ManageRole.setEnabled(block)
-            self.ui.ListWidget_Conversation.setEnabled(block)
-            self.ui.Button_ClearConversations.setEnabled(block)
-            self.ui.Button_CreateConversation.setEnabled(block)
-            self.ui.Button_Load.setEnabled(block)
-            self.ui.Button_Send.setEnabled(block)
-            self.ui.Button_Test.setEnabled(block)
+        def blockInput(block: bool):
+            self.ui.ComboBox_Protocol.setDisabled(block)
+            self.ui.LineEdit_ip.setDisabled(block)
+            self.ui.SpinBox_port.setDisabled(block)
+            self.ui.ComboBox_Type.setDisabled(block)
+            self.ui.ComboBox_Model.setDisabled(block)
+            self.ui.ComboBox_Role.setDisabled(block)
+            self.ui.Button_ManageRole.setDisabled(block)
+            self.ui.ListWidget_Conversation.setDisabled(block)
+            self.ui.Button_ClearConversations.setDisabled(block)
+            self.ui.Button_CreateConversation.setDisabled(block)
+            self.ui.Button_Load.setDisabled(block)
+            self.ui.Button_Send.setDisabled(block)
+            self.ui.Button_Test.setDisabled(block)
             self.ui.TextEdit_Input.blockKeyEnter(block)
-        blockList(False)
+        blockInput(True)
         Messages = self.MessagesDict[ConversationName]
         if self.Thread is not None and self.Thread.isRunning():
             self.Thread.terminate()
-            self.Thread.wait()
         Messages.append({'role': 'user', 'content': InputContent})
         self.MessagesDict[ConversationName] = Messages
         self.updateRecord(ConversationName)
@@ -434,8 +433,16 @@ class MainWindow(Window_MainWindow):
             options = None,
             testtimes = TestTimes
         )
-        self.Thread.textReceived.connect(lambda text: self.recieveAnswer(text, ConversationName))
-        self.Thread.textReceived.connect(lambda: blockList(True))
+        self.Thread.textReceived.connect(
+            lambda text: (
+                self.recieveAnswer(text, ConversationName),
+                Function_AnimateStackedWidget(
+                    self.ui.StackedWidget_SendAndStop,
+                    self.ui.StackedWidgetPage_Send
+                ),
+                blockInput(False)
+            )
+        )
         self.Thread.start()
 
     def Query(self):
@@ -447,7 +454,10 @@ class MainWindow(Window_MainWindow):
         self.startThread(InputContent, ConversationName)
         self.ui.TextEdit_Input.clear()
         self.ui.TextEdit_Input.setFocus()
-        self.ui.StackedWidget_SendAndStop.setCurrentWidget(self.ui.StackedWidgetPage_Stop)
+        Function_AnimateStackedWidget(
+            self.ui.StackedWidget_SendAndStop,
+            self.ui.StackedWidgetPage_Stop
+        )
 
     def QueryTest(self):
         InputContent = self.ui.TextEdit_Input.toPlainText()
@@ -462,7 +472,7 @@ class MainWindow(Window_MainWindow):
         if ok and TotalTestTimes.strip().__len__() > 0:
             self.TotalTestTimes = int(TotalTestTimes.strip())
             if self.TotalTestTimes <= 0:
-                Function_ShowMessageBox(self,
+                MessageBoxBase.pop(self,
                     QMessageBox.Warning,
                     'Warning',
                     'Incorrect number!'
@@ -473,7 +483,10 @@ class MainWindow(Window_MainWindow):
         self.startThread(InputContent, ConversationName, int(TotalTestTimes))
         self.ui.TextEdit_Input.clear()
         self.ui.TextEdit_Input.setFocus()
-        self.ui.StackedWidget_SendAndStop.setCurrentWidget(self.ui.StackedWidgetPage_Stop)
+        Function_AnimateStackedWidget(
+            self.ui.StackedWidget_SendAndStop,
+            self.ui.StackedWidgetPage_Stop
+        )
 
     def LoadQuestions(self):
         ChildWindow_Test = TestWindow(self)
@@ -493,8 +506,10 @@ class MainWindow(Window_MainWindow):
     def StopService(self):
         if self.Thread is not None and self.Thread.isRunning():
             self.Thread.terminate()
-            self.Thread.wait()
-        self.ui.StackedWidget_SendAndStop.setCurrentWidget(self.ui.StackedWidgetPage_Send)
+        Function_AnimateStackedWidget(
+            self.ui.StackedWidget_SendAndStop,
+            self.ui.StackedWidgetPage_Send
+        )
 
     def Main(self):
         # Chat - ParamsManager
@@ -526,32 +541,20 @@ class MainWindow(Window_MainWindow):
         # Window controling buttons
         self.closed.connect(
             lambda: (
-                #self.ExitService(),
+                self.ExitService(),
                 os._exit(0)
             )
         )
         self.ui.Button_Close_Window.clicked.connect(self.close)
-        self.ui.Button_Close_Window.ClearDefaultStyleSheet()
-        self.ui.Button_Close_Window.setStyleSheet(
-            "ButtonBase {background-color: transparent; border: none;}"
-            "ButtonBase:hover {background-color: rgba(210, 123, 123, 210);}"
-        )
+        self.ui.Button_Close_Window.setHoverBackgroundColor(QColor(210, 123, 123, 210))
         self.ui.Button_Close_Window.setIcon(IconBase.X)
 
         self.ui.Button_Maximize_Window.clicked.connect(lambda: self.showNormal() if self.isMaximized() else self.showMaximized())
-        self.ui.Button_Maximize_Window.ClearDefaultStyleSheet()
-        self.ui.Button_Maximize_Window.setStyleSheet(
-            "ButtonBase {background-color: transparent; border: none;}"
-            "ButtonBase:hover {background-color: rgba(123, 123, 123, 123);}"
-        )
+        self.ui.Button_Maximize_Window.setHoverBackgroundColor(QColor(123, 123, 123, 123))
         self.ui.Button_Maximize_Window.setIcon(IconBase.FullScreen)
 
         self.ui.Button_Minimize_Window.clicked.connect(self.showMinimized)
-        self.ui.Button_Minimize_Window.ClearDefaultStyleSheet()
-        self.ui.Button_Minimize_Window.setStyleSheet(
-            "ButtonBase {background-color: transparent; border: none;}"
-            "ButtonBase:hover {background-color: rgba(123, 123, 123, 123);}"
-        )
+        self.ui.Button_Minimize_Window.setHoverBackgroundColor(QColor(123, 123, 123, 123))
         self.ui.Button_Minimize_Window.setIcon(IconBase.Dash)
 
         # Top area

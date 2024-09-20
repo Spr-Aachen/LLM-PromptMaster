@@ -2,10 +2,11 @@ import os
 import pandas
 from pathlib import Path
 from PySide6.QtWidgets import *
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QAction, QStandardItem, QFont
 from QEasyWidgets import QFunctions as QFunc
-from PySide6.QtGui import QAction, QStandardItem
 from QEasyWidgets.Components import ListBase
-from QEasyWidgets.Windows import ChildWindowBase, DialogBase, InputDialogBase
+from QEasyWidgets.Windows import ChildWindowBase, DialogBase, MessageBoxBase, InputDialogBase
 
 from windows.ui.UI_Window import *
 
@@ -35,17 +36,17 @@ class PromptWindow(DialogBase):
         self.PromptDir = PromptDir
 
     def initUI(self):
-        self.TitleArea = QLabel()
+        self.TitleArea = LabelBase()
         self.TitleArea.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.TitleArea.setStyleSheet('font-size: 21px;')
+        self.TitleArea.setFont(QFont('Arial', 21))
 
         Layout_Title = QHBoxLayout()
         Layout_Title.addWidget(self.TitleArea)
         Layout_Title.setContentsMargins(0, 0, 0, 0)
         Layout_Title.setSpacing(12)
 
-        self.Button_CreatePrompt = QPushButton()
-        self.Button_DeletePrompt = QPushButton()
+        self.Button_CreatePrompt = HollowButton()
+        self.Button_DeletePrompt = HollowButton()
         Layout_Buttons = QHBoxLayout()
         Layout_Buttons.addWidget(self.Button_CreatePrompt)
         Layout_Buttons.addWidget(self.Button_DeletePrompt)
@@ -221,7 +222,7 @@ class TestWindow(DialogBase):
         self.TitleBar.CloseButton.deleteLater()
 
     def initUI(self):
-        self.Label = QLabel()
+        self.Label = LabelBase()
         self.Label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.LineEdit_FilePath = LineEditBase()

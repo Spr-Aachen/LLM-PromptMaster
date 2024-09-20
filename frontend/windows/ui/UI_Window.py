@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtCore import QCoreApplication, QMetaObject, QRect, QSize
+from PySide6.QtCore import Qt, QCoreApplication, QMetaObject, QRect, QSize
 from PySide6.QtWidgets import *
 
 from components.Components import *
@@ -76,7 +76,7 @@ class Ui_Window(object):
         self.horizontalLayout_12.setSpacing(0)
         self.horizontalLayout_12.setObjectName(u"horizontalLayout_12")
         self.horizontalLayout_12.setContentsMargins(0, 0, 0, 0)
-        self.Button_Minimize_Window = ButtonBase(self.Frame_Top_Control_Window)
+        self.Button_Minimize_Window = EmbeddedButton(self.Frame_Top_Control_Window)
         self.Button_Minimize_Window.setObjectName(u"Button_Minimize_Window")
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         sizePolicy.setHorizontalStretch(0)
@@ -86,14 +86,14 @@ class Ui_Window(object):
 
         self.horizontalLayout_12.addWidget(self.Button_Minimize_Window)
 
-        self.Button_Maximize_Window = ButtonBase(self.Frame_Top_Control_Window)
+        self.Button_Maximize_Window = EmbeddedButton(self.Frame_Top_Control_Window)
         self.Button_Maximize_Window.setObjectName(u"Button_Maximize_Window")
         sizePolicy.setHeightForWidth(self.Button_Maximize_Window.sizePolicy().hasHeightForWidth())
         self.Button_Maximize_Window.setSizePolicy(sizePolicy)
 
         self.horizontalLayout_12.addWidget(self.Button_Maximize_Window)
 
-        self.Button_Close_Window = ButtonBase(self.Frame_Top_Control_Window)
+        self.Button_Close_Window = EmbeddedButton(self.Frame_Top_Control_Window)
         self.Button_Close_Window.setObjectName(u"Button_Close_Window")
         sizePolicy.setHeightForWidth(self.Button_Close_Window.sizePolicy().hasHeightForWidth())
         self.Button_Close_Window.setSizePolicy(sizePolicy)
@@ -131,7 +131,7 @@ class Ui_Window(object):
         self.gridLayout.setContentsMargins(0, 9, 0, 0)
         self.Layout_ip = QHBoxLayout()
         self.Layout_ip.setObjectName(u"Layout_ip")
-        self.Label_ip = QLabel(self.ToolPage)
+        self.Label_ip = LabelBase(self.ToolPage)
         self.Label_ip.setObjectName(u"Label_ip")
 
         self.Layout_ip.addWidget(self.Label_ip)
@@ -146,7 +146,7 @@ class Ui_Window(object):
 
         self.Layout_port = QHBoxLayout()
         self.Layout_port.setObjectName(u"Layout_port")
-        self.Label_port = QLabel(self.ToolPage)
+        self.Label_port = LabelBase(self.ToolPage)
         self.Label_port.setObjectName(u"Label_port")
 
         self.Layout_port.addWidget(self.Label_port)
@@ -166,7 +166,7 @@ class Ui_Window(object):
 
         self.Layout_Type = QHBoxLayout()
         self.Layout_Type.setObjectName(u"Layout_Type")
-        self.Label_Type = QLabel(self.ToolPage)
+        self.Label_Type = LabelBase(self.ToolPage)
         self.Label_Type.setObjectName(u"Label_Type")
 
         self.Layout_Type.addWidget(self.Label_Type)
@@ -183,7 +183,7 @@ class Ui_Window(object):
 
         self.Layout_Protocal = QHBoxLayout()
         self.Layout_Protocal.setObjectName(u"Layout_Protocal")
-        self.Label_Protocal = QLabel(self.ToolPage)
+        self.Label_Protocal = LabelBase(self.ToolPage)
         self.Label_Protocal.setObjectName(u"Label_Protocal")
 
         self.Layout_Protocal.addWidget(self.Label_Protocal)
@@ -208,7 +208,7 @@ class Ui_Window(object):
         self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
         self.Layout_Model = QHBoxLayout()
         self.Layout_Model.setObjectName(u"Layout_Model")
-        self.Label_Model = QLabel(self.Page1)
+        self.Label_Model = LabelBase(self.Page1)
         self.Label_Model.setObjectName(u"Label_Model")
 
         self.Layout_Model.addWidget(self.Label_Model)
@@ -225,7 +225,7 @@ class Ui_Window(object):
 
         self.Layout_Role = QHBoxLayout()
         self.Layout_Role.setObjectName(u"Layout_Role")
-        self.Label_Role = QLabel(self.Page1)
+        self.Label_Role = LabelBase(self.Page1)
         self.Label_Role.setObjectName(u"Label_Role")
 
         self.Layout_Role.addWidget(self.Label_Role)
@@ -237,7 +237,7 @@ class Ui_Window(object):
 
         self.Layout_Role.addWidget(self.ComboBox_Role)
 
-        self.Button_ManageRole = ButtonBase(self.Page1)
+        self.Button_ManageRole = HollowButton(self.Page1)
         self.Button_ManageRole.setObjectName(u"Button_ManageRole")
         sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         sizePolicy3.setHorizontalStretch(0)
@@ -300,37 +300,13 @@ class Ui_Window(object):
 
         self.Layout_Left.addWidget(self.ListWidget_Conversation, 0, 0, 1, 1)
 
-        self.Button_ClearConversations = QPushButton(self.Content_Left)
+        self.Button_ClearConversations = HollowButton(self.Content_Left)
         self.Button_ClearConversations.setObjectName(u"Button_ClearConversations")
-        self.Button_ClearConversations.setStyleSheet(u"QPushButton {\n"
-"	text-align: center;\n"
-"	font-size: 12px;\n"
-"	background-color: transparent;\n"
-"	padding: 6.6px;\n"
-"	border-width: 1.2px;\n"
-"	border-style: solid;\n"
-"	border-color: rgb(90, 90, 90);\n"
-"}\n"
-"QPushButton:hover {\n"
-"	border-color: rgb(120, 120, 120);\n"
-"}")
 
         self.Layout_Left.addWidget(self.Button_ClearConversations, 1, 0, 1, 1)
 
-        self.Button_CreateConversation = QPushButton(self.Content_Left)
+        self.Button_CreateConversation = HollowButton(self.Content_Left)
         self.Button_CreateConversation.setObjectName(u"Button_CreateConversation")
-        self.Button_CreateConversation.setStyleSheet(u"QPushButton {\n"
-"	text-align: center;\n"
-"	font-size: 12px;\n"
-"	background-color: transparent;\n"
-"	padding: 6.6px;\n"
-"	border-width: 1.2px;\n"
-"	border-style: solid;\n"
-"	border-color: rgb(90, 90, 90);\n"
-"}\n"
-"QPushButton:hover {\n"
-"	border-color: rgb(120, 120, 120);\n"
-"}")
 
         self.Layout_Left.addWidget(self.Button_CreateConversation, 2, 0, 1, 1)
 
@@ -343,20 +319,8 @@ class Ui_Window(object):
         self.Layout_Right.setSpacing(12)
         self.Layout_Right.setObjectName(u"Layout_Right")
         self.Layout_Right.setContentsMargins(0, 0, 0, 0)
-        self.Button_Load = QPushButton(self.Content_Right)
+        self.Button_Load = HollowButton(self.Content_Right)
         self.Button_Load.setObjectName(u"Button_Load")
-        self.Button_Load.setStyleSheet(u"QPushButton {\n"
-"	text-align: center;\n"
-"	font-size: 12px;\n"
-"	background-color: transparent;\n"
-"	padding: 6.6px;\n"
-"	border-width: 1.2px;\n"
-"	border-style: solid;\n"
-"	border-color: rgb(90, 90, 90);\n"
-"}\n"
-"QPushButton:hover {\n"
-"	border-color: rgb(120, 120, 120);\n"
-"}")
 
         self.Layout_Right.addWidget(self.Button_Load, 1, 0, 1, 2)
 
@@ -395,37 +359,13 @@ class Ui_Window(object):
         self.gridLayout_3.setHorizontalSpacing(12)
         self.gridLayout_3.setVerticalSpacing(0)
         self.gridLayout_3.setContentsMargins(0, 0, 0, 0)
-        self.Button_Send = QPushButton(self.StackedWidgetPage_Send)
+        self.Button_Send = HollowButton(self.StackedWidgetPage_Send)
         self.Button_Send.setObjectName(u"Button_Send")
-        self.Button_Send.setStyleSheet(u"QPushButton {\n"
-"	text-align: center;\n"
-"	font-size: 12px;\n"
-"	background-color: transparent;\n"
-"	padding: 6.6px;\n"
-"	border-width: 1.2px;\n"
-"	border-style: solid;\n"
-"	border-color: rgb(90, 90, 90);\n"
-"}\n"
-"QPushButton:hover {\n"
-"	border-color: rgb(120, 120, 120);\n"
-"}")
 
         self.gridLayout_3.addWidget(self.Button_Send, 0, 0, 1, 1)
 
-        self.Button_Test = QPushButton(self.StackedWidgetPage_Send)
+        self.Button_Test = HollowButton(self.StackedWidgetPage_Send)
         self.Button_Test.setObjectName(u"Button_Test")
-        self.Button_Test.setStyleSheet(u"QPushButton {\n"
-"	text-align: center;\n"
-"	font-size: 12px;\n"
-"	background-color: transparent;\n"
-"	padding: 6.6px;\n"
-"	border-width: 1.2px;\n"
-"	border-style: solid;\n"
-"	border-color: rgb(90, 90, 90);\n"
-"}\n"
-"QPushButton:hover {\n"
-"	border-color: rgb(120, 120, 120);\n"
-"}")
 
         self.gridLayout_3.addWidget(self.Button_Test, 0, 1, 1, 1)
 
@@ -436,20 +376,8 @@ class Ui_Window(object):
         self.gridLayout_4.setSpacing(0)
         self.gridLayout_4.setObjectName(u"gridLayout_4")
         self.gridLayout_4.setContentsMargins(0, 0, 0, 0)
-        self.Button_Stop = QPushButton(self.StackedWidgetPage_Stop)
+        self.Button_Stop = HollowButton(self.StackedWidgetPage_Stop)
         self.Button_Stop.setObjectName(u"Button_Stop")
-        self.Button_Stop.setStyleSheet(u"QPushButton {\n"
-"	text-align: center;\n"
-"	font-size: 12px;\n"
-"	background-color: transparent;\n"
-"	padding: 6.6px;\n"
-"	border-width: 1.2px;\n"
-"	border-style: solid;\n"
-"	border-color: rgb(90, 90, 90);\n"
-"}\n"
-"QPushButton:hover {\n"
-"	border-color: rgb(120, 120, 120);\n"
-"}")
 
         self.gridLayout_4.addWidget(self.Button_Stop, 0, 0, 1, 1)
 
