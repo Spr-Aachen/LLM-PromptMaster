@@ -12,7 +12,7 @@
 
 # Frontend&Backend generated files
 **/TestResult.json
-**/Profile/
+**/User Profile/
 
 # Generated contents
 **/__pycache__/

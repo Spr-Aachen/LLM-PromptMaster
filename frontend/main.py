@@ -15,45 +15,27 @@ from PySide6.QtCore import QCoreApplication as QCA
 from PySide6.QtGui import QTextCursor, QAction, QStandardItem
 from PySide6.QtWidgets import *
 from QEasyWidgets import QFunctions as QFunc
-from QEasyWidgets import ComponentsSignals, Theme, EasyTheme, IconBase
+from QEasyWidgets import ComponentsSignals, Theme, EasyTheme, IconBase, Status
 from QEasyWidgets.Windows import MenuBase, InputDialogBase
 
 from Functions import *
 from windows.Windows import *
-from config import CurrentDir, PromptDir, ConversationDir, QuestionDir, ConfigDir
+from config import CurrentDir
 
 ##############################################################################################################################
 
 # 启动参数解析，启动环境，应用端口由命令行传入
 parser = argparse.ArgumentParser()
-parser.add_argument("--promptdir",       help = "prompt目录", type = str, default = PromptDir)
-parser.add_argument("--conversationdir", help = "对话目录",   type = str, default = ConversationDir)
-parser.add_argument("--questiondir",     help = "问题目录",   type = str, default = QuestionDir)
-parser.add_argument("--configdir",       help = "配置目录",   type = str, default = ConfigDir)
+parser.add_argument("--profiledir", help = "配置目录", type = str, default = Path(CurrentDir).joinpath('Profile').as_posix())
 args = parser.parse_args()
 
-PromptDir = args.promptdir
-ConversationDir = args.conversationdir
-QuestionDir = args.questiondir
-ConfigDir = args.configdir
+ProfileDir = args.profiledir
+PromptDir = Path(ProfileDir).joinpath('Prompts').as_posix()
+ConversationDir = Path(ProfileDir).joinpath('Conversations').as_posix()
+QuestionDir = Path(ProfileDir).joinpath('Questions').as_posix()
+ConfigDir = Path(ProfileDir).joinpath('Config').as_posix()
 
 ##############################################################################################################################
-
-def BuildMessageMarkdown(messages: list[dict]):
-    markdown = ""
-    for message in messages:
-        role = str(message['role']).strip()
-        content = str(message['content']).strip()
-        if len(content) == 0:
-            continue
-        content = QFunc.ToMarkdown(content)
-        if role == 'user':
-            markdown += f"**Q**:\n\n{content}\n\n\n"
-        if role == 'assistant':
-            markdown += f"**A**:\n\n{content}\n\n\n"
-            markdown += "---------------------------------------\n\n\n"
-    return markdown
-
 
 def chatRequest(
     #env: str = 'uat',
@@ -127,10 +109,10 @@ def exitService(
     ip: str = 'localhost',
     port: Optional[int] = None
 ):
-    response = requests.post(
+    with requests.post(
         url = f"{protocol}://{ip}:{port}/actuator/shutdown"
-    )
-    return json.loads(response.text) if response.status_code == 200 else "服务未能关闭", response.status_code
+    ) as response:
+        return True if response.status_code == 200 else False
 
 ##############################################################################################################################
 
@@ -261,6 +243,21 @@ class MainWindow(Window_MainWindow):
                 self.MessagesDict[HistoryFileName[:-4]] = Messages # Remove the .txt extension
                 self.ui.ListWidget_Conversation.addItem(HistoryFileName[:-4])
 
+    def setMessages(self, messages: list[dict]):
+        Messages = []
+        for message in messages:
+            Message = {}
+            role = str(message['role']).strip()
+            content = str(message['content']).strip()
+            if len(content) == 0:
+                continue
+            content = QFunc.ToMarkdown(content)
+            Message[role] = content
+            Messages.append(Message)
+        self.ui.MessageBrowser.setMessages(
+            [[list(Message.values())[0], True if list(Message.keys())[0] == 'user' else False, None] for Message in Messages]
+        )
+
     def loadHistory(self, item: QStandardItem):
         # In case the conversation isn't selected
         self.ui.ListWidget_Conversation.setCurrentItem(item) if self.ui.ListWidget_Conversation.currentItem() != item else None
@@ -268,9 +265,8 @@ class MainWindow(Window_MainWindow):
         self.ConversationFilePath = Path(ConversationDir).joinpath(item.text() + '.txt').as_posix()
         with open(self.ConversationFilePath, 'r', encoding = 'utf-8') as f:
             Messages = [json.loads(line) for line in f]
-        # Build&Set Markdown
-        markdown = BuildMessageMarkdown(Messages)
-        self.ui.TextBrowser.setMarkdown(markdown)
+        # Set messages
+        self.setMessages(Messages)
         # Load a question from the txt file and display it in the input area
         self.QuestionFilePath = Path(QuestionDir).joinpath(item.text() + '.txt').as_posix()
         with open(self.QuestionFilePath, 'r', encoding = 'utf-8') as f:
@@ -314,7 +310,7 @@ class MainWindow(Window_MainWindow):
             )
             if confirm == QMessageBox.Yes:
                 self.removeHistoryFiles(currentItem) # Remove file
-                self.ui.TextBrowser.clear()
+                self.ui.MessageBrowser.clear()
                 if self.ui.ListWidget_Conversation.count() > 0:
                     self.loadHistory(self.ui.ListWidget_Conversation.currentItem())
                 self.MessagesDict.pop(old_name) # Remove message
@@ -334,7 +330,7 @@ class MainWindow(Window_MainWindow):
         # Set the files & browser
         with open(self.ConversationFilePath, 'w', encoding = 'utf-8') as f:
             f.write('')
-        self.ui.TextBrowser.clear()
+        self.ui.MessageBrowser.clear()
         with open(self.QuestionFilePath, 'w', encoding = 'utf-8') as f:
             f.write('')
         self.ui.TextEdit_Input.clear()
@@ -362,7 +358,7 @@ class MainWindow(Window_MainWindow):
         for listItem in listItems:
             self.removeHistoryFiles(listItem) # Remove file
             self.MessagesDict.pop(listItem.text()) # Remove message
-        self.ui.TextBrowser.clear()
+        self.ui.MessageBrowser.clear()
 
     def saveConversation(self, Messages: list):
         if self.ui.ListWidget_Conversation.count() == 0:
@@ -378,17 +374,25 @@ class MainWindow(Window_MainWindow):
             QuestionStr = Question.strip()
             f.write(QuestionStr)
 
-    def updateRecord(self, ConversationName):
-        Messages = self.MessagesDict[ConversationName]
-        # Build&Set Markdown
-        markdown = BuildMessageMarkdown(Messages)
-        self.ui.TextBrowser.setMarkdown(markdown) if self.ui.ListWidget_Conversation.currentItem().text() == ConversationName else None
-        # Move the scrollbar to the bottom
-        cursor = self.ui.TextBrowser.textCursor()
-        cursor.movePosition(QTextCursor.End)
-        self.ui.TextBrowser.setTextCursor(cursor)
-        # Save the current conversation to a txt file with the given name
-        self.saveConversation(Messages)
+    def addMessage(self, currentRole: str, messages: list[dict], status = None):
+        if status is not None:
+            self.ui.MessageBrowser.addMessage(
+                '', False, status, False
+            )
+            return
+        for message in reversed(messages):
+            role = str(message['role']).strip()
+            content = str(message['content']).strip()
+            if role != currentRole or len(content) == 0:
+                continue
+            content = QFunc.ToMarkdown(content)
+            self.ui.MessageBrowser.addMessage(
+                content,
+                isSent = False if currentRole == 'assistant' else True,
+                status = status,
+                stream = True if currentRole == 'assistant' else False,
+            )
+            break
 
     def recieveAnswer(self, recievedText, ConversationName):
         Messages = self.MessagesDict[ConversationName]
@@ -397,9 +401,17 @@ class MainWindow(Window_MainWindow):
         if Messages[-1]['role'] == 'user':
             Messages.append({'role': 'assistant', 'content': recievedText})
         self.MessagesDict[ConversationName] = Messages
-        self.updateRecord(ConversationName)
+        # Save the current conversation to a txt file with the given name
+        self.saveConversation(Messages)
+        # Update assistant message
+        self.addMessage('assistant', Messages) if self.ui.ListWidget_Conversation.currentItem().text() == ConversationName else None
 
-    def startThread(self, InputContent: str, ConversationName: str, TestTimes: Optional[int] = None):
+    def startThread(self, TestTimes: Optional[int] = None):
+        InputContent = self.ui.TextEdit_Input.toPlainText()
+        if InputContent.strip().__len__() == 0:
+            return
+        self.createConversation() if self.ui.ListWidget_Conversation.count() == 0 else None
+        ConversationName = self.ui.ListWidget_Conversation.currentItem().text()
         def blockInput(block: bool):
             self.ui.ComboBox_Protocol.setDisabled(block)
             self.ui.LineEdit_ip.setDisabled(block)
@@ -421,7 +433,11 @@ class MainWindow(Window_MainWindow):
             self.Thread.terminate()
         Messages.append({'role': 'user', 'content': InputContent})
         self.MessagesDict[ConversationName] = Messages
-        self.updateRecord(ConversationName)
+        # Save the current conversation to a txt file with the given name
+        self.saveConversation(Messages)
+        # Update user message
+        self.addMessage('user', Messages) if self.ui.ListWidget_Conversation.currentItem().text() == ConversationName else None
+        # Start a new thread to send the request
         self.Thread = RequestThread(
             protocol = self.ui.ComboBox_Protocol.currentText(),
             ip = self.ui.LineEdit_ip.text(),
@@ -444,14 +460,7 @@ class MainWindow(Window_MainWindow):
             )
         )
         self.Thread.start()
-
-    def Query(self):
-        InputContent = self.ui.TextEdit_Input.toPlainText()
-        if InputContent.strip().__len__() == 0:
-            return
-        self.createConversation() if self.ui.ListWidget_Conversation.count() == 0 else None
-        ConversationName = self.ui.ListWidget_Conversation.currentItem().text()
-        self.startThread(InputContent, ConversationName)
+        self.addMessage('', False, Status.Loading)
         self.ui.TextEdit_Input.clear()
         self.ui.TextEdit_Input.setFocus()
         Function_AnimateStackedWidget(
@@ -459,12 +468,10 @@ class MainWindow(Window_MainWindow):
             self.ui.StackedWidgetPage_Stop
         )
 
+    def Query(self):
+        self.startThread()
+
     def QueryTest(self):
-        InputContent = self.ui.TextEdit_Input.toPlainText()
-        if InputContent.strip().__len__() == 0:
-            return
-        self.createConversation() if self.ui.ListWidget_Conversation.count() == 0 else None
-        ConversationName = self.ui.ListWidget_Conversation.currentItem().text()
         TotalTestTimes, ok = InputDialogBase.getText(self,
             'Set Testing Times',
             'Enter testing times:'
@@ -480,13 +487,7 @@ class MainWindow(Window_MainWindow):
                 return
         else:
             return
-        self.startThread(InputContent, ConversationName, int(TotalTestTimes))
-        self.ui.TextEdit_Input.clear()
-        self.ui.TextEdit_Input.setFocus()
-        Function_AnimateStackedWidget(
-            self.ui.StackedWidget_SendAndStop,
-            self.ui.StackedWidgetPage_Stop
-        )
+        self.startThread(int(TotalTestTimes))
 
     def LoadQuestions(self):
         ChildWindow_Test = TestWindow(self)
@@ -542,18 +543,24 @@ class MainWindow(Window_MainWindow):
         self.closed.connect(
             lambda: (
                 self.ExitService(),
-                os._exit(0)
+                QApplication.instance().exit()
             )
         )
         self.ui.Button_Close_Window.clicked.connect(self.close)
+        self.ui.Button_Close_Window.setBorderless(True)
+        self.ui.Button_Close_Window.setTransparent(True)
         self.ui.Button_Close_Window.setHoverBackgroundColor(QColor(210, 123, 123, 210))
         self.ui.Button_Close_Window.setIcon(IconBase.X)
 
         self.ui.Button_Maximize_Window.clicked.connect(lambda: self.showNormal() if self.isMaximized() else self.showMaximized())
+        self.ui.Button_Maximize_Window.setBorderless(True)
+        self.ui.Button_Maximize_Window.setTransparent(True)
         self.ui.Button_Maximize_Window.setHoverBackgroundColor(QColor(123, 123, 123, 123))
         self.ui.Button_Maximize_Window.setIcon(IconBase.FullScreen)
 
         self.ui.Button_Minimize_Window.clicked.connect(self.showMinimized)
+        self.ui.Button_Minimize_Window.setBorderless(True)
+        self.ui.Button_Minimize_Window.setTransparent(True)
         self.ui.Button_Minimize_Window.setHoverBackgroundColor(QColor(123, 123, 123, 123))
         self.ui.Button_Minimize_Window.setIcon(IconBase.Dash)
 
@@ -571,7 +578,6 @@ class MainWindow(Window_MainWindow):
         )
 
         self.ui.Label_ip.setText("地址")
-        self.ui.LineEdit_ip.RemoveFileDialogButton()
         ParamsManager_Chat.SetParam(
             Widget = self.ui.LineEdit_ip,
             Section = 'Input Params',
@@ -605,7 +611,7 @@ class MainWindow(Window_MainWindow):
         )
 
         self.ui.Label_Model.setText("模型")
-        self.ui.ComboBox_Model.addItems(['gpt-4o', 'gemini-1.5-pro-001', 'dall-e3'])
+        self.ui.ComboBox_Model.addItems(['gpt-4o', 'gemini-1.5-pro-001', 'moonshot-v1-128k', 'claude-3-5-sonnet@20240620', 'dall-e3'])
         ParamsManager_Chat.SetParam(
             Widget = self.ui.ComboBox_Model,
             Section = 'Input Params',
@@ -624,7 +630,6 @@ class MainWindow(Window_MainWindow):
         )
 
         self.ui.Label_AssistantID.setText("ID")
-        self.ui.LineEdit_AssistantID.RemoveFileDialogButton()
         ParamsManager_Chat.SetParam(
             Widget = self.ui.LineEdit_AssistantID,
             Section = 'Input Params',
@@ -640,7 +645,9 @@ class MainWindow(Window_MainWindow):
         self.ui.Button_ManageRole.clicked.connect(self.manageRole)
 
         # Right area
-        self.ui.TextEdit_Input.textChanged.connect(self.saveQuestion)
+        self.ui.splitter.setStretchFactor(0, 1)
+
+        self.ui.TextEdit_Input.textChanged.connect(lambda: self.saveQuestion(self.ui.TextEdit_Input.toPlainText()))
         self.ui.TextEdit_Input.keyEnterPressed.connect(self.Query)
         self.ui.TextEdit_Input.setPlaceholderText(
             """

@@ -18,18 +18,19 @@ IsCompiled = False
 def run(
     env: str = 'uat',
     port: Optional[int] = None,
+    profileDir: Optional[str] = None
 ):
     if not IsCompiled:
-        BackendDir = Path(f'{CurrentDir}{os.sep}backend').as_posix()
-        backendFile = Path(f'{BackendDir}{os.sep}main.py').as_posix()
+        backendDir = Path(f'{CurrentDir}{os.sep}backend').as_posix()
+        backendFile = Path(f'{backendDir}{os.sep}main.py').as_posix()
         Popen(
-            f'cd "{BackendDir}" & python "{backendFile}" -e {env} -p {port}',
+            f'cd "{backendDir}" & python "{backendFile}" -e "{env}" -p {port}',
             shell = True
         )
-        FrontendDir = Path(f'{CurrentDir}{os.sep}frontend').as_posix()
-        FrontendFile = Path(f'{FrontendDir}{os.sep}main.py').as_posix()
+        frontendDir = Path(f'{CurrentDir}{os.sep}frontend').as_posix()
+        frontendFile = Path(f'{frontendDir}{os.sep}main.py').as_posix()
         Popen(
-            f'cd "{FrontendDir}" & python "{FrontendFile}"',
+            f'cd "{frontendDir}" & python "{frontendFile}" --profiledir "{profileDir}"',
             shell = True
         )
     else:
@@ -41,6 +42,7 @@ if __name__ == "__main__":
     run(
         env = 'prod',
         port = 8080,
+        profileDir = Path(CurrentDir).joinpath('User Profile').as_posix()
     )
 
 ##############################################################################################################################

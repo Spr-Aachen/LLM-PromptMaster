@@ -76,7 +76,7 @@ class Ui_Window(object):
         self.horizontalLayout_12.setSpacing(0)
         self.horizontalLayout_12.setObjectName(u"horizontalLayout_12")
         self.horizontalLayout_12.setContentsMargins(0, 0, 0, 0)
-        self.Button_Minimize_Window = EmbeddedButton(self.Frame_Top_Control_Window)
+        self.Button_Minimize_Window = ButtonBase(self.Frame_Top_Control_Window)
         self.Button_Minimize_Window.setObjectName(u"Button_Minimize_Window")
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         sizePolicy.setHorizontalStretch(0)
@@ -86,14 +86,14 @@ class Ui_Window(object):
 
         self.horizontalLayout_12.addWidget(self.Button_Minimize_Window)
 
-        self.Button_Maximize_Window = EmbeddedButton(self.Frame_Top_Control_Window)
+        self.Button_Maximize_Window = ButtonBase(self.Frame_Top_Control_Window)
         self.Button_Maximize_Window.setObjectName(u"Button_Maximize_Window")
         sizePolicy.setHeightForWidth(self.Button_Maximize_Window.sizePolicy().hasHeightForWidth())
         self.Button_Maximize_Window.setSizePolicy(sizePolicy)
 
         self.horizontalLayout_12.addWidget(self.Button_Maximize_Window)
 
-        self.Button_Close_Window = EmbeddedButton(self.Frame_Top_Control_Window)
+        self.Button_Close_Window = ButtonBase(self.Frame_Top_Control_Window)
         self.Button_Close_Window.setObjectName(u"Button_Close_Window")
         sizePolicy.setHeightForWidth(self.Button_Close_Window.sizePolicy().hasHeightForWidth())
         self.Button_Close_Window.setSizePolicy(sizePolicy)
@@ -126,8 +126,9 @@ class Ui_Window(object):
         self.ToolPage.setObjectName(u"ToolPage")
         self.ToolPage.setGeometry(QRect(0, 0, 824, 70))
         self.gridLayout = QGridLayout(self.ToolPage)
-        self.gridLayout.setSpacing(12)
         self.gridLayout.setObjectName(u"gridLayout")
+        self.gridLayout.setHorizontalSpacing(21)
+        self.gridLayout.setVerticalSpacing(12)
         self.gridLayout.setContentsMargins(0, 9, 0, 0)
         self.Layout_ip = QHBoxLayout()
         self.Layout_ip.setObjectName(u"Layout_ip")
@@ -315,38 +316,38 @@ class Ui_Window(object):
 
         self.Content_Right = QWidget(self.Content)
         self.Content_Right.setObjectName(u"Content_Right")
-        self.Layout_Right = QGridLayout(self.Content_Right)
-        self.Layout_Right.setSpacing(12)
-        self.Layout_Right.setObjectName(u"Layout_Right")
-        self.Layout_Right.setContentsMargins(0, 0, 0, 0)
-        self.Button_Load = HollowButton(self.Content_Right)
-        self.Button_Load.setObjectName(u"Button_Load")
-
-        self.Layout_Right.addWidget(self.Button_Load, 1, 0, 1, 2)
-
+        self.gridLayout_5 = QGridLayout(self.Content_Right)
+        self.gridLayout_5.setSpacing(12)
+        self.gridLayout_5.setObjectName(u"gridLayout_5")
+        self.gridLayout_5.setContentsMargins(0, 0, 0, 0)
         self.splitter = QSplitter(self.Content_Right)
         self.splitter.setObjectName(u"splitter")
         self.splitter.setStyleSheet(u"QSplitter {\n"
-"	background-color: transparent;\n"
+"	background: transparent;\n"
+"	border: none;\n"
 "}\n"
 "\n"
 "QSplitter::handle {\n"
-"	background-color: transparent;\n"
-"}\n"
-"QSplitter::handle:pressed {\n"
-"	background-color: grey;\n"
+"	background: transparent;\n"
+"	border: none;\n"
 "}")
         self.splitter.setOrientation(Qt.Orientation.Vertical)
-        self.splitter.setHandleWidth(12)
-        self.splitter.setChildrenCollapsible(False)
-        self.TextBrowser = TextBrowserBase(self.splitter)
-        self.TextBrowser.setObjectName(u"TextBrowser")
-        self.splitter.addWidget(self.TextBrowser)
+        self.splitter.setHandleWidth(6)
+        self.MessageBrowser = ChatWidgetBase(self.splitter)
+        self.MessageBrowser.setObjectName(u"MessageBrowser")
+        self.MessageBrowser.setFrameShape(QFrame.Shape.StyledPanel)
+        self.MessageBrowser.setFrameShadow(QFrame.Shadow.Raised)
+        self.splitter.addWidget(self.MessageBrowser)
         self.TextEdit_Input = TextEditBase(self.splitter)
         self.TextEdit_Input.setObjectName(u"TextEdit_Input")
         self.splitter.addWidget(self.TextEdit_Input)
 
-        self.Layout_Right.addWidget(self.splitter, 0, 0, 1, 2)
+        self.gridLayout_5.addWidget(self.splitter, 0, 0, 1, 1)
+
+        self.Button_Load = HollowButton(self.Content_Right)
+        self.Button_Load.setObjectName(u"Button_Load")
+
+        self.gridLayout_5.addWidget(self.Button_Load, 1, 0, 1, 1)
 
         self.StackedWidget_SendAndStop = QStackedWidget(self.Content_Right)
         self.StackedWidget_SendAndStop.setObjectName(u"StackedWidget_SendAndStop")
@@ -383,7 +384,7 @@ class Ui_Window(object):
 
         self.StackedWidget_SendAndStop.addWidget(self.StackedWidgetPage_Stop)
 
-        self.Layout_Right.addWidget(self.StackedWidget_SendAndStop, 3, 0, 1, 2)
+        self.gridLayout_5.addWidget(self.StackedWidget_SendAndStop, 2, 0, 1, 1)
 
 
         self.gridLayout_2.addWidget(self.Content_Right, 1, 1, 1, 1)

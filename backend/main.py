@@ -114,7 +114,7 @@ class PromptTestTool():
         ConfigPath = f"{CurrentDir}{os.sep}config{os.sep}config-{args.profile.strip()}.ini"
 
         gptClient = GPTClient(ConfigPath, PromptDir)
-        assistantClient = AssistantClient(ConfigPath)
+        assistantClient = AssistantClient(ConfigPath, PromptDir)
 
         @self._app.get("/auth", summary = "验证token")
         async def auth(token: TokenParam = Depends(checkToken)):

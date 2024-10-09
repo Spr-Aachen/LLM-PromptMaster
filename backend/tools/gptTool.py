@@ -76,6 +76,7 @@ def GPTPromptTest(
     stream: bool = True,
     TotalTestTimes: Optional[int] = None,
     threashold: float = 0.9,
+    PromptStabilityEvaluator: Optional[str] = None,
     PromptReconstructor: Optional[str] = None,
     sqlConnection: Optional[Union[engine.Engine, engine.Connection, jaydebeapi.Connection]] = None
 ):
@@ -89,7 +90,7 @@ def GPTPromptTest(
     CurrentTestTime = 1
     Answers = []
     while CurrentTestTime <= TotalTestTimes:
-        print('Current test time:', CurrentTestTime)
+        print('Current test time:', CurrentTestTime) #yield f'Current test time: {CurrentTestTime}\n\n', 200
         for result, statuscode in IntranetGPTRequest(
             PFGateway = PFGateway,
             GPTGateway = GPTGateway,
@@ -120,23 +121,27 @@ def GPTPromptTest(
         model = "gpt-4o",
         messages = [
             {
+                'role': "system",
+                'content': PromptStabilityEvaluator
+            },
+            {
                 'role': "user",
-                'content': f"""
-                    下面的列表中包含了针对同一问题的多个返回值，请计算它们的总体稳定性（若最后一个返回值不完整则直接将其忽略），要求结果为浮点型：
-                    {Answers}
-                """
+                'content': '\n,\n'.join(Answers)
             }
         ],
         stream = False
     ): # This iteration would be only executed for once since the stream option is set to false
         try:
-            Stability = float(result)
+            assert statuscode == 200, '...'
+            yield f"分析完毕：\n\n{result}\n\n", 200
+            Stability = float(str(result).strip().strip('```'))
         except:
-            yield f"本次测试返回值的稳定性分析失败，将使用本次测试返回值的相似度计算结果作为替代\n\n", 200
+            yield f"本次测试返回值的稳定值提取失败，将使用本次测试返回值的相似度计算结果作为替代\n\n", 200
             recordingThread.join()
             Stability = average_similarity
         if Stability >= threashold:
-            return f"本次测试返回值的稳定性维持在：{Stability}\n\nprompt无需调优\n\n", 200 # Stop iteration if the success rate is higher than threashold
+            yield f"本次测试返回值的稳定性维持在：{Stability}\n\nprompt无需调优\n\n", 200
+            return # Stop iteration if the success rate is higher than threashold
         elif Stability >= 0:
             yield f"本次测试返回值的稳定性维持在：{Stability}\n\n建议对prompt进行调优\n\n", 200
 
@@ -181,6 +186,9 @@ class GPTClient(object):
         self.PromptPath = Path(PromptDir).joinpath(cf.get("Chat-GPT", "PromptFile")).as_posix()
         with open(self.PromptPath, 'r', encoding = 'utf-8') as f:
             self.Prompt = f.read()
+        self.PromptStabilityEvaluatorPath = Path(PromptDir).joinpath(cf.get("Chat-GPT", "PromptFile_StabilityEvaluator")).as_posix()
+        with open(self.PromptStabilityEvaluatorPath, 'r', encoding = 'utf-8') as f:
+            self.PromptStabilityEvaluator = f.read()
         self.PromptReconstructorPath = Path(PromptDir).joinpath(cf.get("Chat-GPT", "PromptFile_Reconstructor")).as_posix()
         with open(self.PromptReconstructorPath, 'r', encoding = 'utf-8') as f:
             self.PromptReconstructor = f.read()
@@ -254,6 +262,7 @@ class GPTClient(object):
             messages = messages,
             options = options,
             TotalTestTimes = testTimes,
+            PromptStabilityEvaluator = self.PromptStabilityEvaluator,
             PromptReconstructor = self.PromptReconstructor,
             stream = True
         ):

@@ -262,11 +262,9 @@ class TestWindow(DialogBase):
         self.LineEdit_FilePath.setAcceptDrops(True)
         self.LineEdit_FilePath.setPlaceholderText("Please enter the excel file path to load")
 
-        self.LineEdit_Column.RemoveFileDialogButton()
         self.LineEdit_Column.setAcceptDrops(False)
         self.LineEdit_Column.setPlaceholderText("Please enter the column where questions are located")
 
-        self.LineEdit_Amount.RemoveFileDialogButton()
         self.LineEdit_Amount.setAcceptDrops(False)
         self.LineEdit_Amount.setPlaceholderText("Please enter the maximum amount of questions")
 

@@ -77,6 +77,7 @@ def AssistantPromptTest(
     options: Optional[dict] = None,
     stream: bool = True,
     TotalTestTimes: Optional[int] = None,
+    PromptStabilityEvaluator: Optional[str] = None,
     sqlConnection: Optional[Union[engine.Engine, engine.Connection, jaydebeapi.Connection]] = None
 ):
     global average_similarity
@@ -89,7 +90,7 @@ def AssistantPromptTest(
     CurrentTestTime = 1
     Answers = []
     while CurrentTestTime <= TotalTestTimes:
-        print('Current test time:', CurrentTestTime)
+        print('Current test time:', CurrentTestTime) #yield f'Current test time: {CurrentTestTime}\n\n', 200
         for result, statuscode in IntranetAssistantRequest(
             PFGateway = PFGateway,
             APP_ID = APP_ID,
@@ -121,27 +122,32 @@ def AssistantPromptTest(
         model = "gpt-4o",
         messages = [
             {
+                'role': "system",
+                'content': PromptStabilityEvaluator
+            },
+            {
                 'role': "user",
-                'content': f"""
-                    列表中包含了针对同一问题的多个返回值，请分析它们的总体稳定性（若最后一个返回值不完整则直接将其忽略），要求在进行详细分析前先计算总体的相似度百分比：
-                    {Answers}
-                """
+                'content': '\n,\n'.join(Answers)
             }
         ],
         stream = stream
     ):
-        if statuscode != 200:
-            yield f"本次测试返回值的稳定性分析失败，将使用本次测试返回值的相似度计算结果作为替代\n\n", 200
+        try:
+            assert statuscode == 200, '...'
+            yield f"分析完毕：\n\n{result}\n\n", 200
+            Stability = float(str(result).strip().strip('```'))
+        except:
+            yield f"本次测试返回值的稳定值提取失败，将使用本次测试返回值的相似度计算结果作为替代\n\n", 200
             recordingThread.join()
             Stability = average_similarity
-            result = f"本次测试返回值的稳定性维持在：{Stability}\n\n建议对prompt进行调优\n\n"
+            result = f"本次测试返回值的稳定性维持在：{Stability}"
         yield result, 200
 
 
 class AssistantClient(object):
     '''
     '''
-    def __init__(self, config_file):
+    def __init__(self, config_file, PromptDir):
         cf = configparser.ConfigParser()
         cf.read(config_file, encoding = 'utf-8')
         self.PFGateway = cf.get("GetToken", "PFGateway")
@@ -151,6 +157,9 @@ class AssistantClient(object):
         self.ChatURL = cf.get("Chat-Assistant", "ChatURL")
         self.AssistantCode = cf.get("Chat-Assistant", "AssistantCode")
         self.XHeaderTenant = cf.get("Chat-Assistant", "XHeaderTenant")
+        self.PromptStabilityEvaluatorPath = Path(PromptDir).joinpath(cf.get("Chat-GPT", "PromptFile_StabilityEvaluator")).as_posix()
+        with open(self.PromptStabilityEvaluatorPath, 'r', encoding = 'utf-8') as f:
+            self.PromptStabilityEvaluator = f.read()
         '''
         self.jarPath = cf.get("Test-SQL", "jarPath")
         self.DriverName = cf.get("Test-SQL", "DriverName")
@@ -215,6 +224,7 @@ class AssistantClient(object):
             messages = messages,
             options = options,
             TotalTestTimes = testTimes,
+            PromptStabilityEvaluator = self.PromptStabilityEvaluator,
             stream = True
         ):
             yield json.dumps(

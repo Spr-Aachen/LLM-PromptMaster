@@ -60,14 +60,19 @@ def Function_ConfigureCheckBox(
 
 def Function_AnimateStackedWidget(
     StackedWidget: QStackedWidget,
-    TargetIndex: int = 0,
-    Duration: int = 210
+    Target: Union[int, QWidget] = 0,
+    Duration: int = 99
 ):
     '''
     Function to animate stackedwidget
     '''
     OriginalWidget = StackedWidget.currentWidget()
     OriginalGeometry = OriginalWidget.geometry()
+
+    if isinstance(Target, int):
+        TargetIndex = Target
+    if isinstance(Target, QWidget):
+        TargetIndex = StackedWidget.indexOf(Target)
 
     WidgetAnimation = QFunc.Function_SetWidgetPosAnimation(OriginalWidget, Duration)
     WidgetAnimation.finished.connect(
@@ -143,23 +148,26 @@ def Function_SetWidgetValue(
     SetPlaceholderText: bool = False,
     PlaceholderText: Optional[str] = None
 ):
-    if isinstance(Widget, (QLineEdit, LineEditBase, QTextEdit, TextEditBase, QPlainTextEdit)):
+    if isinstance(Widget, (QLineEdit, QTextEdit, QPlainTextEdit)):
         QFunc.Function_SetText(Widget, Value, SetPlaceholderText = SetPlaceholderText, PlaceholderText = PlaceholderText)
         def EditConfig(Value):
             Config.EditConfig(Section, Option, str(Value))
         if Config is not None:
-            Widget.textChanged.connect(EditConfig)
+            Widget.textChanged.connect(lambda: EditConfig(Widget.text() if isinstance(Widget, (QLineEdit)) else Widget.toPlainText()))
             EditConfig(Value)
 
-    if isinstance(Widget, (QComboBox, ComboBoxBase)):
-        Widget.setCurrentText(str(Value))
+    if isinstance(Widget, (QComboBox)):
+        itemTexts = []
+        for index in range(Widget.count()):
+            itemTexts.append(Widget.itemText(index))
+        Widget.setCurrentText(str(Value)) if str(Value) in itemTexts else None
         def EditConfig(Value):
             Config.EditConfig(Section, Option, str(Value))
         if Config is not None:
             Widget.currentTextChanged.connect(EditConfig)
-            EditConfig(Value)
+            EditConfig(Value) if str(Value) in itemTexts else None
 
-    if isinstance(Widget, (QSlider, QSpinBox, SpinBoxBase)):
+    if isinstance(Widget, (QSlider, QSpinBox)):
         Widget.setValue(int(eval(str(Value)) * Times))
         def EditConfig(Value):
             Config.EditConfig(Section, Option, str(eval(str(Value)) / Times))
@@ -167,7 +175,7 @@ def Function_SetWidgetValue(
             Widget.valueChanged.connect(EditConfig)
             EditConfig(Value)
 
-    if isinstance(Widget, (QDoubleSpinBox, DoubleSpinBoxBase)):
+    if isinstance(Widget, (QDoubleSpinBox)):
         Widget.setValue(float(eval(str(Value)) * Times))
         def EditConfig(Value):
             Config.EditConfig(Section, Option, str(eval(str(Value)) / Times))
