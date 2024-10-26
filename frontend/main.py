@@ -529,11 +529,11 @@ class MainWindow(Window_MainWindow):
         Function_ConfigureCheckBox(
             CheckBox = self.ui.CheckBox_SwitchTheme,
             CheckedEvents = [
-                lambda: ParamsManager_Chat.Config.EditConfig('Settings', 'Theme', Theme.Light),
+                lambda: ParamsManager_Chat.Config.editConfig('Settings', 'Theme', Theme.Light),
                 lambda: ComponentsSignals.Signal_SetTheme.emit(Theme.Light) if EasyTheme.THEME != Theme.Light else None
             ],
             UncheckedEvents = [
-                lambda: ParamsManager_Chat.Config.EditConfig('Settings', 'Theme', Theme.Dark),
+                lambda: ParamsManager_Chat.Config.editConfig('Settings', 'Theme', Theme.Dark),
                 lambda: ComponentsSignals.Signal_SetTheme.emit(Theme.Dark) if EasyTheme.THEME != Theme.Dark else None
             ],
             TakeEffect = False
@@ -566,7 +566,7 @@ class MainWindow(Window_MainWindow):
 
         # Top area
         self.ui.ToolBox.widget(0).setText(QCA.translate("ToolBox", "参数配置"))
-        #self.ui.ToolBox.widget(0).collapse()
+        self.ui.ToolBox.widget(0).expand()
 
         self.ui.Label_Protocal.setText("协议")
         self.ui.ComboBox_Protocol.addItems(['http', 'https'])
@@ -683,7 +683,7 @@ class MainWindow(Window_MainWindow):
         self.LoadHistories()
 
         # Set Theme
-        ComponentsSignals.Signal_SetTheme.emit(ParamsManager_Chat.Config.GetValue('Settings', 'Theme', Theme.Auto))
+        ComponentsSignals.Signal_SetTheme.emit(ParamsManager_Chat.Config.getValue('Settings', 'Theme', Theme.Auto))
 
         # Show window
         self.show()

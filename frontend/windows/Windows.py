@@ -181,7 +181,7 @@ class PromptWindow(DialogBase):
 
         self.TitleArea.setText('Prompt Manager')
 
-        self.TextEdit.textChanged.connect(self.savePrompt)
+        self.TextEdit.textChanged.connect(lambda: self.savePrompt(self.TextEdit.toPlainText()))
         self.TextEdit.setPlaceholderText(
             """
             请在此区域输入Prompt
@@ -258,7 +258,7 @@ class TestWindow(DialogBase):
 
         self.Label.setText("Plz provide ur excel file path and its column letter:")
 
-        self.LineEdit_FilePath.SetFileDialog('SelectFile', '表格 (*.csv *.xlsx)')
+        self.LineEdit_FilePath.setFileDialog('SelectFile', '表格 (*.csv *.xlsx)')
         self.LineEdit_FilePath.setAcceptDrops(True)
         self.LineEdit_FilePath.setPlaceholderText("Please enter the excel file path to load")
 
