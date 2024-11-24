@@ -3,8 +3,10 @@ from typing import Optional
 
 ##############################################################################################################################
 
-# token 参数
 class TokenParam:
+    """
+    token 参数
+    """
     def __init__(self, rToken = None, uToken = None, AppId = None):
         self.rToken = rToken
         self.uToken = uToken
@@ -16,6 +18,9 @@ async def checkToken(
     rToken: Optional[str] = Header(default = None, alias = "P-Auth"),
     AppId: Optional[str] = Header(default = None, alias = "P-AppId"),
 ):
+    """
+    check if token is valid
+    """
     def is_empty(*values):
         for value in values:
             if value is None:

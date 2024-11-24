@@ -124,10 +124,9 @@ class PromptWindow(DialogBase):
         if currentItem is not None:
             old_name = currentItem.text()
             confirm = MessageBoxBase.pop(self,
-                QMessageBox.Question,
-                'Delete Prompt',
-                'Are you sure you want to delete this Prompt?',
-                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.Question, 'Delete Prompt',
+                text = 'Are you sure you want to delete this Prompt?',
+                buttons = QMessageBox.Yes | QMessageBox.No,
             )
             if confirm == QMessageBox.Yes:
                 self.removePromptFile(currentItem)
@@ -145,7 +144,7 @@ class PromptWindow(DialogBase):
         if ok and PromptName:
             self.PromptFilePath = Path(self.PromptDir).joinpath(f"{PromptName}.txt").as_posix()
             # Check if the path would be overwritten & Update the history file path
-            self.PromptFilePath = QFunc.RenameIfExists(self.PromptFilePath)
+            self.PromptFilePath = QFunc.renameIfExists(self.PromptFilePath)
             PromptName = Path(self.PromptFilePath).stem
             # Set the files & browser
             with open(self.PromptFilePath, 'w', encoding = 'utf-8') as f:

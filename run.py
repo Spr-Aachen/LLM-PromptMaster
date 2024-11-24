@@ -20,28 +20,22 @@ def run(
     port: Optional[int] = None,
     profileDir: Optional[str] = None
 ):
-    if not IsCompiled:
-        backendDir = Path(f'{CurrentDir}{os.sep}backend').as_posix()
-        backendFile = Path(f'{backendDir}{os.sep}main.py').as_posix()
-        Popen(
-            f'cd "{backendDir}" & python "{backendFile}" -e "{env}" -p {port}',
-            shell = True
-        )
-        frontendDir = Path(f'{CurrentDir}{os.sep}frontend').as_posix()
-        frontendFile = Path(f'{frontendDir}{os.sep}main.py').as_posix()
-        Popen(
-            f'cd "{frontendDir}" & python "{frontendFile}" --profiledir "{profileDir}"',
-            shell = True
-        )
-    else:
-        ''''''
+    resourceDir = Path(sys._MEIPASS).as_posix() if getattr(sys, 'frozen', None) else CurrentDir
+    backendDir = Path(f'{resourceDir}{os.sep}backend').as_posix()
+    backendFile = Path(f'{backendDir}{os.sep}main.py').as_posix()
+    backendCMD = f'python "{backendFile}" -e "{env}" -p {port}'
+    Popen(backendCMD)
+    frontendDir = Path(f'{resourceDir}{os.sep}frontend').as_posix()
+    frontendFile = Path(f'{frontendDir}{os.sep}main.py').as_posix()
+    frontendCMD = f'python "{frontendFile}" --profiledir "{profileDir}"'
+    Popen(frontendCMD)
 
 ##############################################################################################################################
 
 if __name__ == "__main__":
     run(
         env = 'prod',
-        port = 8080,
+        port = 80,
         profileDir = Path(CurrentDir).joinpath('User Profile').as_posix()
     )
 

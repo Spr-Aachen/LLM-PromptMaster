@@ -1,26 +1,23 @@
 # -*- coding: utf-8 -*-
 
 import os
-import io
 import sys
-import json
-import uvicorn
+import psutil
+import signal
 import argparse
-from typing import Union, Optional
+import uvicorn
 from fastapi import FastAPI, Request, Response, status, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from fastapi.middleware.cors import CORSMiddleware
-#from sqlalchemy.orm import Session
-#from sql import crud, models, schemas
-#from sql.database import SessionLocal, engine
+from typing import Union, Optional
+from pathlib import Path
 
 from utils.auth import TokenParam, checkToken
-#from utils.logger import logger
-from tools.gptTool import GPTClient
-from tools.assistantTool import AssistantClient
+from gpt import GPTClient
+from assistant import AssistantClient
 
 ##############################################################################################################################
 
@@ -29,6 +26,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-e", "--profile", help = "环境启动项", type = str)
 parser.add_argument("-p", "--port",    help = "端口",       type = int)
 args = parser.parse_args()
+
+
+currentDir = Path(sys.argv[0]).parent.as_posix()
 
 ##############################################################################################################################
 
@@ -43,30 +43,32 @@ class PromptTestTool():
             description = description,
         )
 
-        # Set all CORS enabled origins
+        # Set all CORS
         self._app.add_middleware(
-            CORSMiddleware,
-            allow_origins=["*"],
-            allow_credentials=True,
-            allow_methods=["*"],
-            allow_headers=["*"],
-            expose_headers=["*"],
+            middleware_class = CORSMiddleware,
+            allow_origins = ["*"],
+            allow_origin_regex = None,
+            allow_credentials = True,
+            allow_methods = ["*"],
+            allow_headers = ["*"],
+            expose_headers = ["*"],
+            max_age = 600,
         )
 
+        # Sever definition
         self.server = uvicorn.Server(uvicorn.Config(self._app))
 
-        self.exception_handler()
-        self.actuator()
+        # Set all tools
+        self.setExceptionHandler()
+        self.setNormalActuator()
+        self.setCoreActuator()
 
-    def get_app(self):
+    def app(self):
         return self._app
 
-    def exception_handler(self):
-        '''
-        异常处理
-        '''
+    def setExceptionHandler(self):
         @self._app.exception_handler(StarletteHTTPException)
-        async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+        async def http_exceptionHandler(request: Request, exc: StarletteHTTPException):
             return JSONResponse(
                 status_code = exc.status_code,
                 content = jsonable_encoder(
@@ -79,7 +81,7 @@ class PromptTestTool():
             )
 
         @self._app.exception_handler(RequestValidationError)
-        async def validation_exception_handler(request: Request, exc: RequestValidationError):
+        async def validation_exceptionHandler(request: Request, exc: RequestValidationError):
             return JSONResponse(
                 status_code = status.HTTP_422_UNPROCESSABLE_ENTITY,
                 content = jsonable_encoder(
@@ -90,103 +92,57 @@ class PromptTestTool():
                 )
             )
 
-    def actuator(self):
-        '''
-        健康检查接口
-        '''
-        @self._app.get("/actuator/health/liveness")
-        async def health_liveness():
-            return {"status": "UP"}
-
-        @self._app.get("/actuator/health/readiness")
-        async def health_readiness():
-            return {"status": "UP"}
-
-        @self._app.post("/actuator/shutdown")
-        async def health_shutdown():
-            # 处理优雅关机相关的逻辑
-            self.server.should_exit = True
-            return {"message": "Shutting down, bye..."}
-
-    def run(self):
-        CurrentDir = sys.path[0]
-        PromptDir = f"{CurrentDir}{os.sep}prompt"
-        ConfigPath = f"{CurrentDir}{os.sep}config{os.sep}config-{args.profile.strip()}.ini"
-
-        gptClient = GPTClient(ConfigPath, PromptDir)
-        assistantClient = AssistantClient(ConfigPath, PromptDir)
-
+    def setNormalActuator(self):
         @self._app.get("/auth", summary = "验证token")
         async def auth(token: TokenParam = Depends(checkToken)):
             return {"data": token}
 
+        @self._app.post("/shutdown")
+        async def shutdown():
+            self.server.should_exit = True
+            Process = psutil.Process(os.getpid())
+            ProcessList =  Process.children(recursive = True) + [Process]
+            for Process in ProcessList:
+                try:
+                    os.kill(Process.pid, signal.SIGTERM)
+                except:
+                    pass
+            #return {"message": "Shutting down, bye..."}
+
+    def setCoreActuator(self):
         @self._app.get("/")
-        async def index():
+        async def default():
             return "Welcome To Prompt Test Service!"
 
         @self._app.post("/gpt")
-        async def gpt(request: Request, model: str = "gpt-4o", testtimes: Optional[int] = None):
+        async def gpt(request: Request, source: str, model: str = "gpt-4o", testtimes: Optional[int] = None):
             reqJs = await request.json()
             message = reqJs.get('message', None)
             options = reqJs.get('options', None)
-            contentstream = gptClient.run(model, message, options) if testtimes is None else gptClient.test(model, message, options, testtimes)
+            promptDir = Path(currentDir).joinpath("prompt").as_posix()
+            configPath = Path(currentDir).joinpath("config", source, f"config-{args.profile.strip()}.ini").as_posix()
+            gptClient = GPTClient(source, configPath, promptDir)
+            contentStream = gptClient.run(model, message, options) if testtimes is None else gptClient.test(model, message, options, testtimes)
             return StreamingResponse(
-                content = contentstream,
+                content = contentStream,
                 media_type = "application/json"
             )
 
         @self._app.post("/assistant")
-        async def assistant(request: Request, code: Optional[str] = None, testtimes: Optional[int] = None):
+        async def assistant(request: Request, source: str, code: Optional[str] = None, testtimes: Optional[int] = None):
             reqJs = await request.json()
             message = reqJs.get('message', None)
             options = reqJs.get('options', None)
-            contentstream = assistantClient.run(code, message, options) if testtimes is None else assistantClient.test(code, message, options, testtimes)
+            promptDir = Path(currentDir).joinpath("prompt").as_posix()
+            configPath = Path(currentDir).joinpath("config", source, f"config-{args.profile.strip()}.ini").as_posix()
+            assistantClient = AssistantClient(source, configPath, promptDir)
+            contentStream = assistantClient.run(code, message, options) if testtimes is None else assistantClient.test(code, message, options, testtimes)
             return StreamingResponse(
-                content = contentstream,
+                content = contentStream,
                 media_type = "application/json"
             )
 
-        '''
-        models.Base.metadata.create_all(bind = engine)
-
-        def get_db():
-            db = SessionLocal()
-            try:
-                yield db
-            finally:
-                db.close()
-
-        @self._app.post("/users/", response_model=schemas.User)
-        def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-            db_user = crud.get_user_by_email(db, email=user.email)
-            if db_user:
-                raise StarletteHTTPException(status_code=400, detail="Email already registered")
-            return crud.create_user(db=db, user=user)
-
-        @self._app.get("/users/", response_model=list[schemas.User])
-        def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-            users = crud.get_users(db, skip=skip, limit=limit)
-            return users
-
-        @self._app.get("/users/{user_id}", response_model=schemas.User)
-        def read_user(user_id: int, db: Session = Depends(get_db)):
-            db_user = crud.get_user(db, user_id=user_id)
-            if db_user is None:
-                raise StarletteHTTPException(status_code=404, detail="User not found")
-            return db_user
-
-        @self._app.post("/users/{user_id}/items/", response_model=schemas.Item)
-        def create_item_for_user(
-            user_id: int, item: schemas.ItemCreate, db: Session = Depends(get_db)
-        ):
-            return crud.create_user_item(db=db, item=item, user_id=user_id)
-
-        @self._app.get("/items/", response_model=list[schemas.Item])
-        def read_items(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-            items = crud.get_items(db, skip=skip, limit=limit)
-            return items
-        '''
-
+    def run(self):
         uvicorn.run(
             app = self._app,
             host = "localhost",
@@ -197,9 +153,9 @@ class PromptTestTool():
 
 if __name__ == "__main__":
     PromptTest = PromptTestTool(
-        "PromptTestClient Demo",
-        "1.0.0",
-        "Just a demo"
+        title = "PromptTestClient Demo",
+        version = "1.0.0",
+        description = "Just a demo"
     )
     PromptTest.run()
 

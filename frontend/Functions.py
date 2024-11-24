@@ -6,8 +6,8 @@ from QEasyWidgets import QFunctions as QFunc
 from QEasyWidgets.Windows import *
 from QEasyWidgets.Components import *
 
-from components.Components import *
-from windows.Windows import *
+from components.componenets import *
+from windows.windows import *
 
 ##############################################################################################################################
 
@@ -31,213 +31,162 @@ FunctionSignals = CustomSignals_Functions()
 ##############################################################################################################################
 
 def Function_ConfigureCheckBox(
-    CheckBox: QCheckBox,
-    CheckedText: Optional[str] = None,
-    CheckedEvents: list = [],
-    UncheckedText: Optional[str] = None,
-    UncheckedEvents: list = [],
-    TakeEffect: bool = False
+    checkBox: QCheckBox,
+    checkedText: Optional[str] = None,
+    checkedEvents: list = [],
+    uncheckedText: Optional[str] = None,
+    uncheckedEvents: list = [],
+    takeEffect: bool = False
 ):
     '''
     Function to configure checkbox
     '''
-    if CheckedText is not None:
-        CheckedEvents.append(lambda: CheckBox.setText(CheckedText))
-    if UncheckedText is not None:
-        UncheckedEvents.append(lambda: CheckBox.setText(UncheckedText))
+    if checkedText is not None:
+        checkedEvents.append(lambda: checkBox.setText(checkedText))
+    if uncheckedText is not None:
+        uncheckedEvents.append(lambda: checkBox.setText(uncheckedText))
 
-    CheckBox.toggled.connect(
-        lambda IsChecked: QFunc.RunEvents(CheckedEvents if IsChecked else UncheckedEvents)
+    checkBox.toggled.connect(
+        lambda IsChecked: QFunc.runEvents(checkedEvents if IsChecked else uncheckedEvents)
     )
 
-    QFunc.RunEvents(CheckedEvents) if TakeEffect and CheckBox.isChecked() else None
-    QFunc.RunEvents(UncheckedEvents) if TakeEffect and not CheckBox.isChecked() else None
+    QFunc.runEvents(checkedEvents) if takeEffect and checkBox.isChecked() else None
+    QFunc.runEvents(uncheckedEvents) if takeEffect and not checkBox.isChecked() else None
 
 ##############################################################################################################################
 
 def Function_AnimateStackedWidget(
-    StackedWidget: QStackedWidget,
-    Target: Union[int, QWidget] = 0,
-    Duration: int = 99
+    stackedWidget: QStackedWidget,
+    target: Union[int, QWidget] = 0,
+    duration: int = 99
 ):
     '''
     Function to animate stackedwidget
     '''
-    OriginalWidget = StackedWidget.currentWidget()
+    OriginalWidget = stackedWidget.currentWidget()
     OriginalGeometry = OriginalWidget.geometry()
 
-    if isinstance(Target, int):
-        TargetIndex = Target
-    if isinstance(Target, QWidget):
-        TargetIndex = StackedWidget.indexOf(Target)
+    if isinstance(target, int):
+        TargetIndex = target
+    if isinstance(target, QWidget):
+        TargetIndex = stackedWidget.indexOf(target)
 
-    WidgetAnimation = QFunc.Function_SetWidgetPosAnimation(OriginalWidget, Duration)
+    WidgetAnimation = QFunc.setWidgetPosAnimation(OriginalWidget, duration)
     WidgetAnimation.finished.connect(
-        lambda: StackedWidget.setCurrentIndex(TargetIndex),
+        lambda: stackedWidget.setCurrentIndex(TargetIndex),
         type = Qt.QueuedConnection
     )
     WidgetAnimation.finished.connect(
         lambda: OriginalWidget.setGeometry(OriginalGeometry),
         type = Qt.QueuedConnection
     )
-    WidgetAnimation.start() if StackedWidget.currentIndex() != TargetIndex else None
-
-
-def Function_AnimateFrame(
-    Frame: QWidget,
-    MinWidth: Optional[int] = None,
-    MaxWidth: Optional[int] = None,
-    MinHeight: Optional[int] = None,
-    MaxHeight: Optional[int] = None,
-    Duration: int = 210,
-    Mode: str = "Toggle",
-    SupportSplitter: bool = False
-):
-    '''
-    Function to animate frame
-    '''
-    def ExtendFrame():
-        QFunc.Function_SetWidgetSizeAnimation(Frame, MaxWidth, None, Duration, SupportSplitter).start() if MaxWidth not in (None, Frame.width()) else None
-        QFunc.Function_SetWidgetSizeAnimation(Frame, None, MaxHeight, Duration, SupportSplitter).start() if MaxHeight not in (None, Frame.height()) else None
-
-    def ReduceFrame():
-        QFunc.Function_SetWidgetSizeAnimation(Frame, MinWidth, None, Duration, SupportSplitter).start() if MinWidth not in (None, Frame.width()) else None
-        QFunc.Function_SetWidgetSizeAnimation(Frame, None, MinHeight, Duration, SupportSplitter).start() if MinHeight not in (None, Frame.height()) else None
-
-    if Mode == "Extend":
-        ExtendFrame()
-    if Mode == "Reduce":
-        ReduceFrame()
-    if Mode == "Toggle":
-        ExtendFrame() if Frame.width() == MinWidth or Frame.height() == MinHeight else ReduceFrame()
-
-
-def Function_AnimateProgressBar(
-    ProgressBar: QProgressBar,
-    MinValue: int = 0,
-    MaxValue: int = 100,
-    DisplayValue: bool = False,
-    IsTaskAlive: bool = False
-):
-    '''
-    Function to animate progressbar
-    '''
-    ProgressBar.setTextVisible(DisplayValue)
-    ProgressBar.setRange(MinValue, MaxValue)
-    ProgressBar.setValue(MinValue)
-
-    if IsTaskAlive == True:
-        ProgressBar.setRange(0, 0)
-        #QApplication.processEvents()
-    else:
-        ProgressBar.setRange(MinValue, MaxValue)
-        ProgressBar.setValue(MaxValue)
+    WidgetAnimation.start() if stackedWidget.currentIndex() != TargetIndex else None
 
 ##############################################################################################################################
 
 def Function_SetWidgetValue(
-    Widget: QWidget,
-    Config: QFunc.ManageConfig,
-    Section: str = ...,
-    Option: str = ...,
-    Value = ...,
-    Times: Union[int, float] = 1,
-    SetPlaceholderText: bool = False,
-    PlaceholderText: Optional[str] = None
+    widget: QWidget,
+    config: QFunc.configManager,
+    section: str = ...,
+    option: str = ...,
+    value = ...,
+    times: Union[int, float] = 1,
+    setPlaceholderText: bool = False,
+    placeholderText: Optional[str] = None
 ):
-    if isinstance(Widget, (QLineEdit, QTextEdit, QPlainTextEdit)):
-        QFunc.Function_SetText(Widget, Value, SetPlaceholderText = SetPlaceholderText, PlaceholderText = PlaceholderText)
-        def EditConfig(Value):
-            Config.editConfig(Section, Option, str(Value))
-        if Config is not None:
-            Widget.textChanged.connect(lambda: EditConfig(Widget.text() if isinstance(Widget, (QLineEdit)) else Widget.toPlainText()))
-            EditConfig(Value)
+    if isinstance(widget, (QLineEdit, QTextEdit, QPlainTextEdit)):
+        QFunc.setText(widget, value, setPlaceholderText = setPlaceholderText, placeholderText = placeholderText)
+        def EditConfig(value):
+            config.editConfig(section, option, str(value))
+        if config is not None:
+            widget.textChanged.connect(lambda: EditConfig(widget.text() if isinstance(widget, (QLineEdit)) else widget.toPlainText()))
+            EditConfig(value)
 
-    if isinstance(Widget, (QComboBox)):
+    if isinstance(widget, (QComboBox)):
         itemTexts = []
-        for index in range(Widget.count()):
-            itemTexts.append(Widget.itemText(index))
-        Widget.setCurrentText(str(Value)) if str(Value) in itemTexts else None
-        def EditConfig(Value):
-            Config.editConfig(Section, Option, str(Value))
-        if Config is not None:
-            Widget.currentTextChanged.connect(EditConfig)
-            EditConfig(Value) if str(Value) in itemTexts else None
+        for index in range(widget.count()):
+            itemTexts.append(widget.itemText(index))
+        widget.setCurrentText(str(value)) if str(value) in itemTexts else None
+        def EditConfig(value):
+            config.editConfig(section, option, str(value))
+        if config is not None:
+            widget.currentTextChanged.connect(EditConfig)
+            EditConfig(value) if str(value) in itemTexts else None
 
-    if isinstance(Widget, (QSlider, QSpinBox)):
-        Widget.setValue(int(eval(str(Value)) * Times))
-        def EditConfig(Value):
-            Config.editConfig(Section, Option, str(eval(str(Value)) / Times))
-        if Config is not None:
-            Widget.valueChanged.connect(EditConfig)
-            EditConfig(Value)
+    if isinstance(widget, (QSpinBox, QSlider)):
+        widget.setValue(int(eval(str(value)) * times))
+        def EditConfig(value):
+            config.editConfig(section, option, str(eval(str(value)) / times))
+        if config is not None:
+            widget.valueChanged.connect(EditConfig)
+            EditConfig(value)
 
-    if isinstance(Widget, (QDoubleSpinBox)):
-        Widget.setValue(float(eval(str(Value)) * Times))
-        def EditConfig(Value):
-            Config.editConfig(Section, Option, str(eval(str(Value)) / Times))
-        if Config is not None:
-            Widget.valueChanged.connect(EditConfig)
-            EditConfig(Value)
+    if isinstance(widget, (QDoubleSpinBox, SliderBase)):
+        widget.setValue(float(eval(str(value)) * times))
+        def EditConfig(value):
+            config.editConfig(section, option, str(eval(str(value)) / times))
+        if config is not None:
+            widget.valueChanged.connect(EditConfig)
+            EditConfig(value)
 
-    if isinstance(Widget, (QCheckBox, QRadioButton)):
-        Widget.setChecked(eval(str(Value)))
-        def EditConfig(Value):
-            Config.editConfig(Section, Option, str(Value))
-        if Config is not None:
-            Widget.toggled.connect(EditConfig)
-            EditConfig(Value)
+    if isinstance(widget, (QCheckBox, QRadioButton)):
+        widget.setChecked(eval(str(value)))
+        def EditConfig(value):
+            config.editConfig(section, option, str(value))
+        if config is not None:
+            widget.toggled.connect(EditConfig)
+            EditConfig(value)
 
 
 class ParamsManager:
     def __init__(self,
-        ConfigPath: str,
+        configPath: str,
     ):
-        self.ConfigPath = ConfigPath
-        self.Config = QFunc.ManageConfig(ConfigPath)
+        self.configPath = configPath
+        self.config = QFunc.configManager(configPath)
 
         self.RegistratedWidgets = {}
 
-    def Registrate(self, Widget: QWidget, value: tuple):
-        self.RegistratedWidgets[Widget] = value
+    def registrate(self, widget: QWidget, value: tuple):
+        self.RegistratedWidgets[widget] = value
 
     def SetParam(self,
-        Widget: QWidget,
-        Section: str = ...,
-        Option: str = ...,
-        DefaultValue = None,
-        Times: Union[int, float] = 1,
-        SetPlaceholderText: bool = False,
-        PlaceholderText: Optional[str] = None,
-        Registrate: bool = True
+        widget: QWidget,
+        section: str = ...,
+        option: str = ...,
+        defaultValue = None,
+        times: Union[int, float] = 1,
+        setPlaceholderText: bool = False,
+        placeholderText: Optional[str] = None,
+        registrate: bool = True
     ):
-        Value = self.Config.getValue(Section, Option, str(DefaultValue))
-        Function_SetWidgetValue(Widget, self.Config, Section, Option, Value, Times, SetPlaceholderText, PlaceholderText)
-        self.Registrate(Widget, (Section, Option, DefaultValue, Times, SetPlaceholderText, PlaceholderText)) if Registrate else None
+        value = self.config.getValue(section, option, str(defaultValue))
+        Function_SetWidgetValue(widget, self.config, section, option, value, times, setPlaceholderText, placeholderText)
+        self.registrate(widget, (section, option, defaultValue, times, setPlaceholderText, placeholderText)) if registrate else None
 
-    def ResetParam(self, Widget: QWidget):
-        value = self.RegistratedWidgets[Widget]
-        Function_SetWidgetValue(Widget, self.Config, *value)
+    def ResetParam(self, widget: QWidget):
+        value = self.RegistratedWidgets[widget]
+        Function_SetWidgetValue(widget, self.config, *value)
 
     def ClearSettings(self):
-        with open(self.ConfigPath, 'w'):
+        with open(self.configPath, 'w'):
             pass
-        self.Config = QFunc.ManageConfig(self.ConfigPath)
+        self.config = QFunc.configManager(self.configPath)
 
     def ResetSettings(self):
         self.ClearSettings()
-        for Widget in list(self.RegistratedWidgets.keys()):
-            self.ResetParam(Widget)
+        for widget in list(self.RegistratedWidgets.keys()):
+            self.ResetParam(widget)
 
-    def ImportSettings(self, ReadPath: str):
-        ConfigParser = QFunc.ManageConfig(ReadPath).parser()
-        with open(self.ConfigPath, 'w', encoding = 'utf-8') as Config:
-            ConfigParser.write(Config)
-        for Widget, value in list(self.RegistratedWidgets.items()):
-            self.SetParam(Widget, *value)
+    def ImportSettings(self, readPath: str):
+        configParser = QFunc.configManager(readPath).parser()
+        with open(self.configPath, 'w', encoding = 'utf-8') as config:
+            configParser.write(config)
+        for widget, value in list(self.RegistratedWidgets.items()):
+            self.SetParam(widget, *value)
 
-    def ExportSettings(self, SavePath: str):
-        with open(SavePath, 'w', encoding = 'utf-8') as Config:
-            self.Config.parser().write(Config)
+    def ExportSettings(self, savePath: str):
+        with open(savePath, 'w', encoding = 'utf-8') as config:
+            self.config.parser().write(config)
 
 ##############################################################################################################################

@@ -3,7 +3,7 @@
 from PySide6.QtCore import Qt, QCoreApplication, QMetaObject, QRect, QSize
 from PySide6.QtWidgets import *
 
-from components.Components import *
+from components.componenets import *
 
 
 class Ui_Window(object):

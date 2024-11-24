@@ -5,71 +5,20 @@ GPT工具类
 import configparser
 import json
 import threading
-import pandas
-import numpy
-import jaydebeapi
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+from sqlalchemy import engine
 from pathlib import Path
 from typing import Optional, Union
-from sqlalchemy import engine
 
-from utils.request import IntranetGPTRequest
+from utils.request_transsion import gptRequest
+from utils.calc import ComputeSimilarity, average_similarity
 
 ##############################################################################################################################
 
-average_similarity = None
-
-def ComputeSimilarity(
-    Answers: list,
-    messages: list = [{}],
-    TotalTestTimes: Optional[int] = None,
-    sqlConnection: Optional[Union[engine.Engine, engine.Connection, jaydebeapi.Connection]] = None
-):
-    global average_similarity
-
-    # Compute the similarity matrix
-    tfidf_vectorizer = TfidfVectorizer()
-    tfidf_matrix = tfidf_vectorizer.fit_transform(Answers) # Transfer data into TF-IDF vector
-    similarity_matrix = cosine_similarity(tfidf_matrix) # Compute cosine similarity of the matrix
-    # Compute the average similarity
-    num_of_elements = similarity_matrix.shape[0] * similarity_matrix.shape[1] - similarity_matrix.shape[0]
-    sum_of_similarity = numpy.sum(similarity_matrix) - numpy.sum(numpy.diagonal(similarity_matrix))
-    average_similarity = sum_of_similarity / num_of_elements
-
-    # Save the test result
-    TestResult = {
-        'CodeInput': [messages[1]['content']],
-        'Answer': [Answers[0]],
-        'TestTimes': TotalTestTimes,
-        'Similarity': [average_similarity]
-    }
-    TestResultDF = pandas.DataFrame(TestResult)
-    jsonPath = './TestResult.json'
-    if Path(jsonPath).exists():
-        TestResultsDF = pandas.read_json(jsonPath, encoding = 'utf-8')
-        TestResultsDF = TestResultsDF[TestResultsDF['CodeInput'] != messages[1]['content']]
-        TestResultsDF = pandas.concat([TestResultsDF, TestResultDF])
-        TestResultsDF.reset_index(inplace = True, drop = True)
-    else:
-        TestResultsDF = TestResultDF
-    TestResultsDF.to_json(jsonPath)
-
-    # Upload the test result to the database
-    if sqlConnection is not None:
-        TestResultsDF.to_sql(
-            name = "Prompt Test Result",
-            con = sqlConnection,
-            if_exists = 'replace'
-        )
-        sqlConnection.close()
-
-
 def GPTPromptTest(
-    PFGateway: str = ...,
-    GPTGateway: str = ...,
-    APP_ID: Optional[str] = None,
-    APP_Secret: str = ...,
+    pfGateway: str = ...,
+    gptGateway: str = ...,
+    appID: Optional[str] = None,
+    appSecret: str = ...,
     model: str = ...,
     messages: list = [{}],
     options: Optional[dict] = None,
@@ -78,10 +27,8 @@ def GPTPromptTest(
     threashold: float = 0.9,
     PromptStabilityEvaluator: Optional[str] = None,
     PromptReconstructor: Optional[str] = None,
-    sqlConnection: Optional[Union[engine.Engine, engine.Connection, jaydebeapi.Connection]] = None
+    sqlConnection: Optional[Union[engine.Engine, engine.Connection]] = None
 ):
-    global average_similarity
-
     # Test the GPT model
     if TotalTestTimes is not None:
         assert TotalTestTimes > 0, 'Incorrect number!'
@@ -91,11 +38,11 @@ def GPTPromptTest(
     Answers = []
     while CurrentTestTime <= TotalTestTimes:
         print('Current test time:', CurrentTestTime) #yield f'Current test time: {CurrentTestTime}\n\n', 200
-        for result, statuscode in IntranetGPTRequest(
-            PFGateway = PFGateway,
-            GPTGateway = GPTGateway,
-            APP_ID = APP_ID,
-            APP_Secret = APP_Secret,
+        for result, statuscode in gptRequest(
+            pfGateway = pfGateway,
+            gptGateway = gptGateway,
+            appID = appID,
+            appSecret = appSecret,
             model = model,
             messages = messages,
             options = options,
@@ -107,17 +54,17 @@ def GPTPromptTest(
     # Compute the test results' similarity
     recordingThread = threading.Thread(
         target = ComputeSimilarity,
-        args = (Answers, messages, TotalTestTimes, sqlConnection)
+        args = (Answers, messages[1]['content'], TotalTestTimes, sqlConnection)
     )
     recordingThread.start()
 
     # Analyze the test result
     yield "本次测试结果正在分析与计算中，请稍后...\n\n", 200
-    for result, statuscode in IntranetGPTRequest(
-        PFGateway = PFGateway,
-        GPTGateway = GPTGateway,
-        APP_ID = APP_ID,
-        APP_Secret = APP_Secret,
+    for result, statuscode in gptRequest(
+        pfGateway = pfGateway,
+        gptGateway = gptGateway,
+        appID = appID,
+        appSecret = appSecret,
         model = "gpt-4o",
         messages = [
             {
@@ -150,11 +97,11 @@ def GPTPromptTest(
     for Message in messages:
         if Message['role'] == 'system':
             Prompt = Message['content']
-    for result, statuscode in IntranetGPTRequest(
-        PFGateway = PFGateway,
-        GPTGateway = GPTGateway,
-        APP_ID = APP_ID,
-        APP_Secret = APP_Secret,
+    for result, statuscode in gptRequest(
+        pfGateway = pfGateway,
+        gptGateway = gptGateway,
+        appID = appID,
+        appSecret = appSecret,
         model = "claude-3-5-sonnet@20240620",
         messages = [
             {
@@ -174,29 +121,28 @@ def GPTPromptTest(
 
 
 class GPTClient(object):
-    '''
-    '''
-    def __init__(self, ConfigPath, PromptDir):
+    """
+    This class is used to interact with the GPT API
+    """
+    def __init__(self, sourceName, configPath, promptDir):
         cf = configparser.ConfigParser()
-        cf.read(ConfigPath, encoding = 'utf-8')
-        self.PFGateway = cf.get("GetToken", "PFGateway")
-        self.GPTGateway = cf.get("GetToken", "GPTGateway")
-        self.access_key_id = cf.get("GetToken", "APPID")
-        self.access_key_secret = cf.get("GetToken", "APPSecret")
-        self.PromptPath = Path(PromptDir).joinpath(cf.get("Chat-GPT", "PromptFile")).as_posix()
+        cf.read(configPath, encoding = 'utf-8')
+        self.pfGateway = cf.get("GetToken", "pfGateway")
+        self.gptGateway = cf.get("GetToken", "gptGateway")
+        self.access_key_id = cf.get("GetToken", "appID")
+        self.access_key_secret = cf.get("GetToken", "appSecret")
+        self.PromptPath = Path(promptDir).joinpath(cf.get("Chat-GPT", "promptFile")).as_posix()
         with open(self.PromptPath, 'r', encoding = 'utf-8') as f:
             self.Prompt = f.read()
-        self.PromptStabilityEvaluatorPath = Path(PromptDir).joinpath(cf.get("Chat-GPT", "PromptFile_StabilityEvaluator")).as_posix()
+        self.PromptStabilityEvaluatorPath = Path(promptDir).joinpath(cf.get("Chat-GPT", "promptFile_stabilityEvaluator")).as_posix()
         with open(self.PromptStabilityEvaluatorPath, 'r', encoding = 'utf-8') as f:
             self.PromptStabilityEvaluator = f.read()
-        self.PromptReconstructorPath = Path(PromptDir).joinpath(cf.get("Chat-GPT", "PromptFile_Reconstructor")).as_posix()
+        self.PromptReconstructorPath = Path(promptDir).joinpath(cf.get("Chat-GPT", "promptFile_reconstructor")).as_posix()
         with open(self.PromptReconstructorPath, 'r', encoding = 'utf-8') as f:
             self.PromptReconstructor = f.read()
         '''
-        self.jarPath = cf.get("Test-SQL", "jarPath")
-        self.DriverName = cf.get("Test-SQL", "DriverName")
-        self.UserName = cf.get("Test-SQL", "UserName")
-        self.Password = cf.get("Test-SQL", "Password")
+        self.userName = cf.get("Test-SQL", "userName")
+        self.password = cf.get("Test-SQL", "password")
         self.sqlURL = cf.get("Test-SQL", "sqlURL")
         '''
 
@@ -215,11 +161,11 @@ class GPTClient(object):
                 'content': str(messages),
             }
         ] if not (isinstance(messages, list) and isinstance(messages[0], dict)) else messages
-        for result, statuscode in IntranetGPTRequest(
-            PFGateway = self.PFGateway,
-            GPTGateway = self.GPTGateway,
-            APP_ID = self.access_key_id,
-            APP_Secret = self.access_key_secret,
+        for result, statuscode in gptRequest(
+            pfGateway = self.pfGateway,
+            gptGateway = self.gptGateway,
+            appID = self.access_key_id,
+            appSecret = self.access_key_secret,
             model = model,
             messages = messages,
             options = options,
@@ -246,18 +192,13 @@ class GPTClient(object):
             }
         ] if not (isinstance(messages, list) and isinstance(messages[0], dict)) else messages
         '''
-        sqlConnection = jaydebeapi.connect(
-            jclassname = self.DriverName,
-            url = self.sqlURL,
-            driver_args = [self.UserName, self.Password],
-            jars = self.jarPath
-        )
+        sqlConnection = 
         '''
         for result, statuscode in GPTPromptTest(
-            PFGateway = self.PFGateway,
-            GPTGateway = self.GPTGateway,
-            APP_ID = self.access_key_id,
-            APP_Secret = self.access_key_secret,
+            pfGateway = self.pfGateway,
+            gptGateway = self.gptGateway,
+            appID = self.access_key_id,
+            appSecret = self.access_key_secret,
             model = model,
             messages = messages,
             options = options,

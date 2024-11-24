@@ -5,9 +5,9 @@ from QEasyWidgets import QFunctions as QFunc
 ##############################################################################################################################
 
 # Check whether python file is compiled
-_, IsFileCompiled = QFunc.GetFileInfo()
+_, isFileCompiled = QFunc.getFileInfo()
 
 # Get current directory
-CurrentDir = QFunc.GetBaseDir(__file__ if IsFileCompiled == False else sys.executable)
+currentDir = QFunc.getBaseDir(__file__ if isFileCompiled == False else sys.executable)
 
 ##############################################################################################################################

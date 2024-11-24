@@ -18,22 +18,22 @@ from QEasyWidgets import QFunctions as QFunc
 from QEasyWidgets import ComponentsSignals, Theme, EasyTheme, IconBase, Status
 from QEasyWidgets.Windows import MenuBase, InputDialogBase
 
-from Functions import *
-from windows.Windows import *
-from config import CurrentDir
+from functions import *
+from windows.windows import *
+from config import currentDir
 
 ##############################################################################################################################
 
 # 启动参数解析，启动环境，应用端口由命令行传入
 parser = argparse.ArgumentParser()
-parser.add_argument("--profiledir", help = "配置目录", type = str, default = Path(CurrentDir).joinpath('Profile').as_posix())
+parser.add_argument("--profiledir", help = "配置目录", type = str, default = Path(currentDir).joinpath('Profile').as_posix())
 args = parser.parse_args()
 
-ProfileDir = args.profiledir
-PromptDir = Path(ProfileDir).joinpath('Prompts').as_posix()
-ConversationDir = Path(ProfileDir).joinpath('Conversations').as_posix()
-QuestionDir = Path(ProfileDir).joinpath('Questions').as_posix()
-ConfigDir = Path(ProfileDir).joinpath('Config').as_posix()
+profileDir = args.profiledir
+promptDir = Path(profileDir).joinpath('Prompts').as_posix()
+conversationDir = Path(profileDir).joinpath('Conversations').as_posix()
+questionDir = Path(profileDir).joinpath('Questions').as_posix()
+configDir = Path(profileDir).joinpath('Config').as_posix()
 
 ##############################################################################################################################
 
@@ -42,6 +42,7 @@ def chatRequest(
     protocol: str = 'http',
     ip: str = 'localhost',
     port: Optional[int] = None,
+    sourceName: str = 'openai',
     type: str = 'assistant',
     model: Optional[str] = None,
     code: Optional[str] = None,
@@ -50,7 +51,7 @@ def chatRequest(
     testtimes: Optional[int] = None,
     stream: bool = True
 ):
-    # 双Token身份验证，获取令牌
+    # Get token
     if port is None:
         port = 80 if protocol == 'http' else 443
     Headers = {
@@ -65,18 +66,18 @@ def chatRequest(
     if response.status_code == 200:
         res_token = response.json()
         Token = res_token.get("data", {})
-        oauth_token = f"Bearer {Token}"
+        oAuth_token = f"Bearer {Token}"
     else:
         yield "Request failed", response.status_code
 
-    # gpt/智能体接口请求
+    # Post message
     if type == 'gpt':
-        query = f"model={'gpt-4o' if model is None else model}{f'&testtimes={testtimes}' if testtimes is not None else ''}"
+        query = f"source={sourceName}&model={'gpt-4o' if model is None else model}{f'&testtimes={testtimes}' if testtimes is not None else ''}"
     if type == 'assistant':
-        query = f"code={'114514' if code is None else code}{f'&testtimes={testtimes}' if testtimes is not None else ''}"
+        query = f"source={sourceName}&code={'114514' if code is None else code}{f'&testtimes={testtimes}' if testtimes is not None else ''}"
     URL = f"{protocol}://{ip}:{port}/{type}{f'?{query}' if len(query) > 0 else ''}"
     Headers = {
-        'Authorization': oauth_token
+        'Authorization': oAuth_token
     }
     Payload = {
         'message': messages,
@@ -109,6 +110,8 @@ def exitService(
     ip: str = 'localhost',
     port: Optional[int] = None
 ):
+    if port is None:
+        port = 80 if protocol == 'http' else 443
     with requests.post(
         url = f"{protocol}://{ip}:{port}/actuator/shutdown"
     ) as response:
@@ -116,7 +119,7 @@ def exitService(
 
 ##############################################################################################################################
 
-class RequestThread(QThread):
+class thread_request(QThread):
     textReceived = Signal(str)
 
     def __init__(self,
@@ -124,6 +127,7 @@ class RequestThread(QThread):
         protocol: str = 'http',
         ip: str = 'localhost',
         port: Optional[int] = None,
+        sourceName: str = 'openai',
         type: str = 'assistant',
         model: Optional[str] = None,
         code: Optional[str] = None,
@@ -137,6 +141,7 @@ class RequestThread(QThread):
         self.protocol = protocol
         self.ip = ip
         self.port = port
+        self.sourceName = sourceName
         self.type = type
         self.model = model
         self.code = code
@@ -150,6 +155,7 @@ class RequestThread(QThread):
             protocol = self.protocol,
             ip = self.ip,
             port = self.port,
+            sourceName = self.sourceName,
             type = self.type,
             model = self.model,
             code = self.code,
@@ -163,9 +169,6 @@ class RequestThread(QThread):
 ##############################################################################################################################
 
 class MainWindow(Window_MainWindow):
-    '''
-    Main Window
-    '''
     roles = {"无": ""}
 
     MessagesDict = {}
@@ -179,12 +182,12 @@ class MainWindow(Window_MainWindow):
 
     def getRoles(self):
         # Check if the prompt directory exists
-        if not os.path.exists(PromptDir):
-            os.makedirs(PromptDir)
+        if not os.path.exists(promptDir):
+            os.makedirs(promptDir)
         # Initialize roles and add prompt to combobox
-        for HistoryFileName in os.listdir(PromptDir):
+        for HistoryFileName in os.listdir(promptDir):
             if HistoryFileName.endswith('.txt'):
-                HistoryFilePath = Path(PromptDir).joinpath(HistoryFileName).as_posix()
+                HistoryFilePath = Path(promptDir).joinpath(HistoryFileName).as_posix()
                 if os.path.getsize(HistoryFilePath) == 0:
                     os.remove(HistoryFilePath)
                     continue
@@ -210,7 +213,7 @@ class MainWindow(Window_MainWindow):
             self.MessagesDict[ConversationName] = Messages
 
     def manageRole(self):
-        ChildWindow_Prompt = PromptWindow(self, PromptDir)
+        ChildWindow_Prompt = PromptWindow(self, promptDir)
         ChildWindow_Prompt.exec()
         # Update roles
         self.roles = {**{"无": ""}, **ChildWindow_Prompt.PromptDict}
@@ -221,19 +224,19 @@ class MainWindow(Window_MainWindow):
         self.ui.ComboBox_Role.setCurrentText(SelectedRole) if SelectedRole in self.roles.keys() else None
         self.applyRole()
 
-    def LoadHistories(self):
+    def loadHistories(self):
         # Check if the conversations directory exists
-        if not os.path.exists(ConversationDir):
-            os.makedirs(ConversationDir)
+        if not os.path.exists(conversationDir):
+            os.makedirs(conversationDir)
         # Check if the questions directory exists
-        if not os.path.exists(QuestionDir):
-            os.makedirs(QuestionDir)
+        if not os.path.exists(questionDir):
+            os.makedirs(questionDir)
         # Initialize MessagesDict and add conversations&questions to listwidget
         self.ui.ListWidget_Conversation.clear()
-        for HistoryFileName in os.listdir(ConversationDir):
+        for HistoryFileName in os.listdir(conversationDir):
             if HistoryFileName.endswith('.txt'):
-                ConversationFilePath = Path(ConversationDir).joinpath(HistoryFileName).as_posix()
-                QuestionFilePath = Path(QuestionDir).joinpath(HistoryFileName).as_posix()
+                ConversationFilePath = Path(conversationDir).joinpath(HistoryFileName).as_posix()
+                QuestionFilePath = Path(questionDir).joinpath(HistoryFileName).as_posix()
                 if os.path.getsize(ConversationFilePath) == 0:
                     os.remove(ConversationFilePath)
                     os.remove(QuestionFilePath) if Path(QuestionFilePath).exists() else None
@@ -251,7 +254,7 @@ class MainWindow(Window_MainWindow):
             content = str(message['content']).strip()
             if len(content) == 0:
                 continue
-            content = QFunc.ToMarkdown(content)
+            content = QFunc.toMarkdown(content)
             Message[role] = content
             Messages.append(Message)
         self.ui.MessageBrowser.setMessages(
@@ -262,13 +265,13 @@ class MainWindow(Window_MainWindow):
         # In case the conversation isn't selected
         self.ui.ListWidget_Conversation.setCurrentItem(item) if self.ui.ListWidget_Conversation.currentItem() != item else None
         # Load a conversation from a txt file and display it in the browser
-        self.ConversationFilePath = Path(ConversationDir).joinpath(item.text() + '.txt').as_posix()
+        self.ConversationFilePath = Path(conversationDir).joinpath(item.text() + '.txt').as_posix()
         with open(self.ConversationFilePath, 'r', encoding = 'utf-8') as f:
             Messages = [json.loads(line) for line in f]
         # Set messages
         self.setMessages(Messages)
         # Load a question from the txt file and display it in the input area
-        self.QuestionFilePath = Path(QuestionDir).joinpath(item.text() + '.txt').as_posix()
+        self.QuestionFilePath = Path(questionDir).joinpath(item.text() + '.txt').as_posix()
         with open(self.QuestionFilePath, 'r', encoding = 'utf-8') as f:
             Question = f.read()
         # Set qustion
@@ -276,8 +279,8 @@ class MainWindow(Window_MainWindow):
 
     def removeHistoryFiles(self, listItem: QStandardItem):
         self.ui.ListWidget_Conversation.takeItem(self.ui.ListWidget_Conversation.row(listItem))
-        os.remove(Path(ConversationDir).joinpath(listItem.text() + '.txt').as_posix())
-        os.remove(Path(QuestionDir).joinpath(listItem.text() + '.txt').as_posix())
+        os.remove(Path(conversationDir).joinpath(listItem.text() + '.txt').as_posix())
+        os.remove(Path(questionDir).joinpath(listItem.text() + '.txt').as_posix())
 
     def renameConversation(self):
         currentItem = self.ui.ListWidget_Conversation.currentItem()
@@ -288,11 +291,11 @@ class MainWindow(Window_MainWindow):
                 'Enter new conversation name:'
             )
             if ok and new_name:
-                self.ConversationFilePath = Path(ConversationDir).joinpath(f"{new_name}.txt").as_posix()
-                os.rename(Path(ConversationDir).joinpath(f"{old_name}.txt"), self.ConversationFilePath)
+                self.ConversationFilePath = Path(conversationDir).joinpath(f"{new_name}.txt").as_posix()
+                os.rename(Path(conversationDir).joinpath(f"{old_name}.txt"), self.ConversationFilePath)
                 currentItem.setText(new_name)
-                self.QuestionFilePath = Path(QuestionDir).joinpath(f"{new_name}.txt").as_posix()
-                os.rename(Path(QuestionDir).joinpath(f"{old_name}.txt"), self.QuestionFilePath)
+                self.QuestionFilePath = Path(questionDir).joinpath(f"{new_name}.txt").as_posix()
+                os.rename(Path(questionDir).joinpath(f"{old_name}.txt"), self.QuestionFilePath)
                 # Transfer&Remove message
                 self.MessagesDict[new_name] = self.MessagesDict[old_name]
                 self.MessagesDict.pop(old_name) # Remove message
@@ -303,10 +306,9 @@ class MainWindow(Window_MainWindow):
         if currentItem is not None:
             old_name = currentItem.text()
             confirm = MessageBoxBase.pop(self,
-                QMessageBox.Question,
-                'Delete Conversation',
-                'Sure you wanna delete this conversation?',
-                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.Question, 'Delete Conversation',
+                text = 'Sure you wanna delete this conversation?',
+                buttons = QMessageBox.Yes | QMessageBox.No,
             )
             if confirm == QMessageBox.Yes:
                 self.removeHistoryFiles(currentItem) # Remove file
@@ -320,13 +322,13 @@ class MainWindow(Window_MainWindow):
         beijing_timezone = pytz.timezone('Asia/Shanghai')
         formatted_time = datetime.now(beijing_timezone).strftime("%Y_%m_%d_%H_%M_%S")
         # Check if the path would be overwritten
-        FilePath = Path(ConversationDir).joinpath(f"{formatted_time}.txt")
-        FilePath = QFunc.RenameIfExists(FilePath)
+        FilePath = Path(conversationDir).joinpath(f"{formatted_time}.txt")
+        FilePath = QFunc.renameIfExists(FilePath)
         FileName = Path(FilePath).name
         ConversationName = Path(FilePath).stem
         # Update the history file path and the question file path
         self.ConversationFilePath = FilePath
-        self.QuestionFilePath = Path(QuestionDir).joinpath(FileName).as_posix()
+        self.QuestionFilePath = Path(questionDir).joinpath(FileName).as_posix()
         # Set the files & browser
         with open(self.ConversationFilePath, 'w', encoding = 'utf-8') as f:
             f.write('')
@@ -344,16 +346,7 @@ class MainWindow(Window_MainWindow):
         # Set focus to input box
         self.ui.TextEdit_Input.setFocus()
 
-    def ShowContextMenu(self, position):
-        context_menu = MenuBase(self)
-        delete_action = QAction("Delete Conversation", self)
-        delete_action.triggered.connect(self.deleteConversation)
-        rename_action = QAction("Rename Conversation", self)
-        rename_action.triggered.connect(self.renameConversation)
-        context_menu.addActions([delete_action, rename_action])
-        context_menu.exec(self.ui.ListWidget_Conversation.mapToGlobal(position))
-
-    def ClearConversations(self):
+    def clearConversations(self):
         listItems = [self.ui.ListWidget_Conversation.item(i) for i in range(self.ui.ListWidget_Conversation.count())]
         for listItem in listItems:
             self.removeHistoryFiles(listItem) # Remove file
@@ -385,7 +378,7 @@ class MainWindow(Window_MainWindow):
             content = str(message['content']).strip()
             if role != currentRole or len(content) == 0:
                 continue
-            content = QFunc.ToMarkdown(content)
+            content = QFunc.toMarkdown(content)
             self.ui.MessageBrowser.addMessage(
                 content,
                 isSent = False if currentRole == 'assistant' else True,
@@ -438,10 +431,11 @@ class MainWindow(Window_MainWindow):
         # Update user message
         self.addMessage('user', Messages) if self.ui.ListWidget_Conversation.currentItem().text() == ConversationName else None
         # Start a new thread to send the request
-        self.Thread = RequestThread(
+        self.Thread = thread_request(
             protocol = self.ui.ComboBox_Protocol.currentText(),
             ip = self.ui.LineEdit_ip.text(),
             port = self.ui.SpinBox_port.text(),
+            sourceName = 'transsion',
             type = self.ui.ComboBox_Type.currentText(),
             model = self.ui.ComboBox_Model.currentText(),
             code = self.ui.LineEdit_AssistantID.text(),
@@ -468,10 +462,10 @@ class MainWindow(Window_MainWindow):
             self.ui.StackedWidgetPage_Stop
         )
 
-    def Query(self):
+    def query(self):
         self.startThread()
 
-    def QueryTest(self):
+    def queryTest(self):
         TotalTestTimes, ok = InputDialogBase.getText(self,
             'Set Testing Times',
             'Enter testing times:'
@@ -480,8 +474,7 @@ class MainWindow(Window_MainWindow):
             self.TotalTestTimes = int(TotalTestTimes.strip())
             if self.TotalTestTimes <= 0:
                 MessageBoxBase.pop(self,
-                    QMessageBox.Warning,
-                    'Warning',
+                    QMessageBox.Warning, 'Warning',
                     'Incorrect number!'
                 )
                 return
@@ -489,7 +482,7 @@ class MainWindow(Window_MainWindow):
             return
         self.startThread(int(TotalTestTimes))
 
-    def LoadQuestions(self):
+    def loadQuestions(self):
         ChildWindow_Test = TestWindow(self)
         ChildWindow_Test.exec()
         Questions =  ChildWindow_Test.QuestionList
@@ -497,14 +490,14 @@ class MainWindow(Window_MainWindow):
             self.createConversation()
             self.ui.TextEdit_Input.setText(Question)
 
-    def ExitService(self):
+    def exitService(self):
         exitService(
             protocol = self.ui.ComboBox_Protocol.currentText(),
             ip = self.ui.LineEdit_ip.text(),
             port = self.ui.SpinBox_port.text(),
         )
 
-    def StopService(self):
+    def stopService(self):
         if self.Thread is not None and self.Thread.isRunning():
             self.Thread.terminate()
         Function_AnimateStackedWidget(
@@ -512,13 +505,13 @@ class MainWindow(Window_MainWindow):
             self.ui.StackedWidgetPage_Send
         )
 
-    def Main(self):
+    def main(self):
         # Chat - ParamsManager
-        Path_Config_Chat = QFunc.NormPath(Path(ConfigDir).joinpath('Config_Chat.ini'))
+        Path_Config_Chat = QFunc.normPath(Path(configDir).joinpath('Config_Chat.ini'))
         ParamsManager_Chat = ParamsManager(Path_Config_Chat)
 
         # Logo
-        self.setWindowIcon(QIcon(QFunc.NormPath(Path(CurrentDir).joinpath('assets/images/Logo.ico'))))
+        self.setWindowIcon(QIcon(QFunc.normPath(Path(currentDir).joinpath('assets/images/Logo.ico'))))
 
         # Theme toggler
         ComponentsSignals.Signal_SetTheme.connect(
@@ -527,22 +520,22 @@ class MainWindow(Window_MainWindow):
             )
         )
         Function_ConfigureCheckBox(
-            CheckBox = self.ui.CheckBox_SwitchTheme,
-            CheckedEvents = [
-                lambda: ParamsManager_Chat.Config.editConfig('Settings', 'Theme', Theme.Light),
+            checkBox = self.ui.CheckBox_SwitchTheme,
+            checkedEvents = [
+                lambda: ParamsManager_Chat.config.editConfig('Settings', 'Theme', Theme.Light),
                 lambda: ComponentsSignals.Signal_SetTheme.emit(Theme.Light) if EasyTheme.THEME != Theme.Light else None
             ],
-            UncheckedEvents = [
-                lambda: ParamsManager_Chat.Config.editConfig('Settings', 'Theme', Theme.Dark),
+            uncheckedEvents = [
+                lambda: ParamsManager_Chat.config.editConfig('Settings', 'Theme', Theme.Dark),
                 lambda: ComponentsSignals.Signal_SetTheme.emit(Theme.Dark) if EasyTheme.THEME != Theme.Dark else None
             ],
-            TakeEffect = False
+            takeEffect = False
         )
 
         # Window controling buttons
         self.closed.connect(
             lambda: (
-                self.ExitService(),
+                self.exitService(),
                 QApplication.instance().exit()
             )
         )
@@ -571,29 +564,29 @@ class MainWindow(Window_MainWindow):
         self.ui.Label_Protocal.setText("协议")
         self.ui.ComboBox_Protocol.addItems(['http', 'https'])
         ParamsManager_Chat.SetParam(
-            Widget = self.ui.ComboBox_Protocol,
-            Section = 'Input Params',
-            Option = 'Protocol',
-            DefaultValue = 'http'
+            widget = self.ui.ComboBox_Protocol,
+            section = 'Input Params',
+            option = 'Protocol',
+            defaultValue = 'http'
         )
 
         self.ui.Label_ip.setText("地址")
         ParamsManager_Chat.SetParam(
-            Widget = self.ui.LineEdit_ip,
-            Section = 'Input Params',
-            Option = 'IP',
-            DefaultValue = '127.0.0.1',
-            SetPlaceholderText = True,
-            PlaceholderText = "Please enter the ip"
+            widget = self.ui.LineEdit_ip,
+            section = 'Input Params',
+            option = 'IP',
+            defaultValue = '127.0.0.1',
+            setPlaceholderText = True,
+            placeholderText = "Please enter the ip"
         )
 
         self.ui.Label_port.setText("端口")
         self.ui.SpinBox_port.setRange(0, 65535)
         ParamsManager_Chat.SetParam(
-            Widget = self.ui.SpinBox_port,
-            Section = 'Input Params',
-            Option = 'Port',
-            DefaultValue = 8080
+            widget = self.ui.SpinBox_port,
+            section = 'Input Params',
+            option = 'Port',
+            defaultValue = 8080
         )
 
         self.ui.Label_Type.setText("类型")
@@ -604,39 +597,39 @@ class MainWindow(Window_MainWindow):
             )
         )
         ParamsManager_Chat.SetParam(
-            Widget = self.ui.ComboBox_Type,
-            Section = 'Input Params',
-            Option = 'Role',
-            DefaultValue = "gpt"
+            widget = self.ui.ComboBox_Type,
+            section = 'Input Params',
+            option = 'Role',
+            defaultValue = "gpt"
         )
 
         self.ui.Label_Model.setText("模型")
         self.ui.ComboBox_Model.addItems(['gpt-4o', 'gemini-1.5-pro-001', 'moonshot-v1-128k', 'claude-3-5-sonnet@20240620', 'dall-e3'])
         ParamsManager_Chat.SetParam(
-            Widget = self.ui.ComboBox_Model,
-            Section = 'Input Params',
-            Option = 'Model',
-            DefaultValue = 'gpt-4o'
+            widget = self.ui.ComboBox_Model,
+            section = 'Input Params',
+            option = 'Model',
+            defaultValue = 'gpt-4o'
         )
 
         self.ui.Label_Role.setText("角色")
         self.ui.ComboBox_Role.addItems(list(self.getRoles().keys()))
         self.ui.ComboBox_Role.activated.connect(self.applyRole)
         ParamsManager_Chat.SetParam(
-            Widget = self.ui.ComboBox_Role,
-            Section = 'Input Params',
-            Option = 'Role',
-            DefaultValue = "无"
+            widget = self.ui.ComboBox_Role,
+            section = 'Input Params',
+            option = 'Role',
+            defaultValue = "无"
         )
 
         self.ui.Label_AssistantID.setText("ID")
         ParamsManager_Chat.SetParam(
-            Widget = self.ui.LineEdit_AssistantID,
-            Section = 'Input Params',
-            Option = 'AssistantID',
-            DefaultValue = '6b16892979c2487ba5817377e5722acd',
-            SetPlaceholderText = True,
-            PlaceholderText = "Please enter the assistant's ID"
+            widget = self.ui.LineEdit_AssistantID,
+            section = 'Input Params',
+            option = 'AssistantID',
+            defaultValue = '6b16892979c2487ba5817377e5722acd',
+            setPlaceholderText = True,
+            placeholderText = "Please enter the assistant's ID"
         )
 
         self.ui.Button_ManageRole.setText("")
@@ -648,7 +641,7 @@ class MainWindow(Window_MainWindow):
         self.ui.splitter.setStretchFactor(0, 1)
 
         self.ui.TextEdit_Input.textChanged.connect(lambda: self.saveQuestion(self.ui.TextEdit_Input.toPlainText()))
-        self.ui.TextEdit_Input.keyEnterPressed.connect(self.Query)
+        self.ui.TextEdit_Input.keyEnterPressed.connect(self.query)
         self.ui.TextEdit_Input.setPlaceholderText(
             """
             请在此区域输入您的问题，点击 Send 或按下 Ctrl+Enter 发送提问
@@ -657,33 +650,37 @@ class MainWindow(Window_MainWindow):
         )
 
         self.ui.Button_Load.setText('从文件导入问题')
-        self.ui.Button_Load.clicked.connect(self.LoadQuestions)
+        self.ui.Button_Load.clicked.connect(self.loadQuestions)
 
         self.ui.Button_Send.setText('发送')
-        self.ui.Button_Send.clicked.connect(self.Query)
+        self.ui.Button_Send.clicked.connect(self.query)
 
         self.ui.Button_Stop.setText('停止')
-        self.ui.Button_Stop.clicked.connect(self.StopService)
+        self.ui.Button_Stop.clicked.connect(self.stopService)
 
         self.ui.Button_Test.setText('测试')
-        self.ui.Button_Test.clicked.connect(self.QueryTest)
+        self.ui.Button_Test.clicked.connect(self.queryTest)
 
         # Left area
         self.ui.ListWidget_Conversation.itemClicked.connect(self.loadHistory)
-        self.ui.ListWidget_Conversation.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.ui.ListWidget_Conversation.customContextMenuRequested.connect(self.ShowContextMenu)
+        self.ui.ListWidget_Conversation.setContextMenu(
+            actions = {
+                "Delete Conversation": self.deleteConversation,
+                "Rename Conversation": self.renameConversation,
+            }
+        )
 
         self.ui.Button_ClearConversations.setText('清空对话')
-        self.ui.Button_ClearConversations.clicked.connect(self.ClearConversations)
+        self.ui.Button_ClearConversations.clicked.connect(self.clearConversations)
 
         self.ui.Button_CreateConversation.setText('创建对话')
         self.ui.Button_CreateConversation.clicked.connect(self.createConversation)
 
         # Load histories
-        self.LoadHistories()
+        self.loadHistories()
 
         # Set Theme
-        ComponentsSignals.Signal_SetTheme.emit(ParamsManager_Chat.Config.getValue('Settings', 'Theme', Theme.Auto))
+        ComponentsSignals.Signal_SetTheme.emit(ParamsManager_Chat.config.getValue('Settings', 'Theme', Theme.Auto))
 
         # Show window
         self.show()
@@ -697,14 +694,17 @@ class MainWindow(Window_MainWindow):
         # Set focus to input box
         self.ui.TextEdit_Input.setFocus()
 
+##############################################################################################################################
 
 if __name__ == '__main__':
     App = QApplication(sys.argv)
 
-    SC = QSplashScreen(QPixmap(QFunc.NormPath(Path(CurrentDir).joinpath('assets/images/others/SplashScreen.png'))))
+    SC = QSplashScreen(QPixmap(QFunc.normPath(Path(currentDir).joinpath('assets/images/others/SplashScreen.png'))))
     SC.show()
 
     window = MainWindow()
-    window.Main()
+    window.main()
 
     sys.exit(App.exec())
+
+##############################################################################################################################

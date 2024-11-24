@@ -21,11 +21,11 @@ ChatURLs_Paint = {
 ChatURLs = {**ChatURLs_Norm, **ChatURLs_Paint}
 
 
-def IntranetGPTRequest(
-    PFGateway: str = ...,
-    GPTGateway: str = ...,
-    APP_ID: Optional[str] = None,
-    APP_Secret: str = ...,
+def gptRequest(
+    pfGateway: str = ...,
+    gptGateway: str = ...,
+    appID: Optional[str] = None,
+    appSecret: str = ...,
     model: str = ...,
     messages: list = [{}],
     options: Optional[dict] = None,
@@ -37,21 +37,21 @@ def IntranetGPTRequest(
     session.mount('http://', requests.adapters.HTTPAdapter(max_retries = 3))
     session.mount('https://', requests.adapters.HTTPAdapter(max_retries = 3))
     # 获取令牌
-    url = f"{PFGateway}/service-pf-open-gateway/oauth/token?grant_type=client_credentials&client_id={APP_ID}&client_secret={APP_Secret}"
+    url = f"{pfGateway}/service-pf-open-gateway/oauth/token?grant_type=client_credentials&client_id={appID}&client_secret={appSecret}"
     response = requests.get(
         url = url
     )
     if response.status_code == 200:
         res_token = response.json()
         accessToken = res_token.get("data", {}).get("access_token", "")
-        oauth_token = f"Bearer {accessToken}"
+        oAuth_token = f"Bearer {accessToken}"
     else:
         yield "Request failed", response.status_code
     # 请求GPT接口
-    url = f"{GPTGateway}/{ChatURLs[model]}"
+    url = f"{gptGateway}/{ChatURLs[model]}"
     Headers = {
         'Content-Type': 'application/json',
-        'Authorization': oauth_token
+        'Authorization': oAuth_token
     }
     if model in ChatURLs_Norm:
         Payload = {
@@ -96,12 +96,12 @@ def IntranetGPTRequest(
 
 ##############################################################################################################################
 
-def IntranetAssistantRequest(
-    PFGateway: str = ...,
-    APP_ID: Optional[str] = None,
-    APP_Secret: str = ...,
-    ChatURL: str = ...,
-    XHeaderTenant: str = ...,
+def assistantRequest(
+    pfGateway: str = ...,
+    appID: Optional[str] = None,
+    appSecret: str = ...,
+    chatURL: str = ...,
+    xheaderTenant: str = ...,
     assistantCode: str = ...,
     messages: list = [{}],
     options: Optional[dict] = None,
@@ -113,7 +113,7 @@ def IntranetAssistantRequest(
     session.mount('http://', requests.adapters.HTTPAdapter(max_retries = 3))
     session.mount('https://', requests.adapters.HTTPAdapter(max_retries = 3))
     # 获取令牌
-    url = f"{PFGateway}/service-pf-open-gateway/oauth/token?grant_type=client_credentials&client_id={APP_ID}&client_secret={APP_Secret}"
+    url = f"{pfGateway}/service-pf-open-gateway/oauth/token?grant_type=client_credentials&client_id={appID}&client_secret={appSecret}"
     response = requests.get(
         url = url
     )
@@ -124,10 +124,10 @@ def IntranetAssistantRequest(
     else:
         yield "Request failed", response.status_code
     # 请求智库接口
-    url = f"{PFGateway}/{ChatURL}/{assistantCode}"
+    url = f"{pfGateway}/{chatURL}/{assistantCode}"
     Headers = {
         'Content-Type': 'application/json',
-        'x-header-tenant': XHeaderTenant,
+        'x-header-tenant': xheaderTenant,
         'Authorization': oauth_token
     }
     Payload = {
