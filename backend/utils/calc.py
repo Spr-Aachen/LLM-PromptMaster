@@ -10,17 +10,17 @@ from typing import Optional, Union
 
 average_similarity = None
 
-def ComputeSimilarity(
-    Answers: list,
+def computeSimilarity(
+    answers: list,
     codeInput: list,
-    TotalTestTimes: Optional[int] = None,
+    totalTestTimes: Optional[int] = None,
     sqlConnection: Optional[Union[engine.Engine, engine.Connection]] = None
 ):
     global average_similarity
 
     # Compute the similarity matrix
     tfidf_vectorizer = TfidfVectorizer()
-    tfidf_matrix = tfidf_vectorizer.fit_transform(Answers) # Transfer data into TF-IDF vector
+    tfidf_matrix = tfidf_vectorizer.fit_transform(answers) # Transfer data into TF-IDF vector
     similarity_matrix = cosine_similarity(tfidf_matrix) # Compute cosine similarity of the matrix
     # Compute the average similarity
     num_of_elements = similarity_matrix.shape[0] * similarity_matrix.shape[1] - similarity_matrix.shape[0]
@@ -30,8 +30,8 @@ def ComputeSimilarity(
     # Save the test result
     TestResult = {
         'CodeInput': [codeInput],
-        'Answer': [Answers[0]],
-        'TestTimes': TotalTestTimes,
+        'Answer': [answers[0]],
+        'TestTimes': totalTestTimes,
         'Similarity': [average_similarity]
     }
     TestResultDF = pandas.DataFrame(TestResult)

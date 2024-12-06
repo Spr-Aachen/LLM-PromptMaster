@@ -16,14 +16,14 @@ IsCompiled = False
 
 
 def run(
-    env: str = 'uat',
+    host: str = 'localhost',
     port: Optional[int] = None,
     profileDir: Optional[str] = None
 ):
     resourceDir = Path(sys._MEIPASS).as_posix() if getattr(sys, 'frozen', None) else CurrentDir
     backendDir = Path(f'{resourceDir}{os.sep}backend').as_posix()
     backendFile = Path(f'{backendDir}{os.sep}main.py').as_posix()
-    backendCMD = f'python "{backendFile}" -e "{env}" -p {port}'
+    backendCMD = f'python "{backendFile}" --host "{host}" --port {port}'
     Popen(backendCMD)
     frontendDir = Path(f'{resourceDir}{os.sep}frontend').as_posix()
     frontendFile = Path(f'{frontendDir}{os.sep}main.py').as_posix()
@@ -34,7 +34,7 @@ def run(
 
 if __name__ == "__main__":
     run(
-        env = 'prod',
+        host = 'localhost',
         port = 80,
         profileDir = Path(CurrentDir).joinpath('User Profile').as_posix()
     )

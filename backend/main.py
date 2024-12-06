@@ -6,16 +6,16 @@ import psutil
 import signal
 import argparse
 import uvicorn
-from fastapi import FastAPI, Request, Response, status, Depends
+from fastapi import FastAPI, Request, Response, status, UploadFile, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from typing import Union, Optional
+from typing import Union, Optional, List
 from pathlib import Path
 
-from utils.auth import TokenParam, checkToken
+from utils import TokenParam, checkToken, write_file
 from gpt import GPTClient
 from assistant import AssistantClient
 
@@ -23,12 +23,16 @@ from assistant import AssistantClient
 
 # 启动参数解析，启动环境，应用端口由命令行传入
 parser = argparse.ArgumentParser()
-parser.add_argument("-e", "--profile", help = "环境启动项", type = str)
-parser.add_argument("-p", "--port",    help = "端口",       type = int)
+#parser.add_argument("--env",  help = "环境启动项", type = str, default = "prod")
+parser.add_argument("--host", help = "主机地址",   type = str, default = "localhost")
+parser.add_argument("--port", help = "端口",       type = int, default = 8080)
 args = parser.parse_args()
 
 
 currentDir = Path(sys.argv[0]).parent.as_posix()
+
+
+UPLOAD_DIR = Path(Path(currentDir).root).joinpath('uploads').as_posix()
 
 ##############################################################################################################################
 
@@ -97,6 +101,15 @@ class PromptTestTool():
         async def auth(token: TokenParam = Depends(checkToken)):
             return {"data": token}
 
+        @self._app.post("/upload")
+        async def upload_file(files: List[UploadFile]):
+            os.makedirs(UPLOAD_DIR, exist_ok = True)
+            for file in files:
+                filePath = Path(UPLOAD_DIR).joinpath(file.filename).as_posix()
+                os.remove(filePath) if Path(filePath).exists() else None
+                await write_file(filePath, file)
+            return {"status": "Succeeded"}
+
         @self._app.post("/shutdown")
         async def shutdown():
             self.server.should_exit = True
@@ -115,12 +128,12 @@ class PromptTestTool():
             return "Welcome To Prompt Test Service!"
 
         @self._app.post("/gpt")
-        async def gpt(request: Request, source: str, model: str = "gpt-4o", testtimes: Optional[int] = None):
+        async def gpt(request: Request, source: str, env: Optional[str] = None, model: str = "gpt-4o", testtimes: Optional[int] = None):
             reqJs = await request.json()
             message = reqJs.get('message', None)
             options = reqJs.get('options', None)
             promptDir = Path(currentDir).joinpath("prompt").as_posix()
-            configPath = Path(currentDir).joinpath("config", source, f"config-{args.profile.strip()}.ini").as_posix()
+            configPath = Path(currentDir).joinpath("config", source, f"config-{env.strip()}.ini" if env is not None else "config.ini").as_posix()
             gptClient = GPTClient(source, configPath, promptDir)
             contentStream = gptClient.run(model, message, options) if testtimes is None else gptClient.test(model, message, options, testtimes)
             return StreamingResponse(
@@ -129,12 +142,12 @@ class PromptTestTool():
             )
 
         @self._app.post("/assistant")
-        async def assistant(request: Request, source: str, code: Optional[str] = None, testtimes: Optional[int] = None):
+        async def assistant(request: Request, source: str, env: Optional[str] = None, code: Optional[str] = None, testtimes: Optional[int] = None):
             reqJs = await request.json()
             message = reqJs.get('message', None)
             options = reqJs.get('options', None)
             promptDir = Path(currentDir).joinpath("prompt").as_posix()
-            configPath = Path(currentDir).joinpath("config", source, f"config-{args.profile.strip()}.ini").as_posix()
+            configPath = Path(currentDir).joinpath("config", source, f"config-{env.strip()}.ini" if env is not None else "config.ini").as_posix()
             assistantClient = AssistantClient(source, configPath, promptDir)
             contentStream = assistantClient.run(code, message, options) if testtimes is None else assistantClient.test(code, message, options, testtimes)
             return StreamingResponse(
@@ -145,7 +158,7 @@ class PromptTestTool():
     def run(self):
         uvicorn.run(
             app = self._app,
-            host = "localhost",
+            host = args.host,
             port = args.port
         )
 

@@ -29,7 +29,8 @@ def gptRequest(
     model: str = ...,
     messages: list = [{}],
     options: Optional[dict] = None,
-    stream: bool = True
+    stream: bool = True,
+    **kwargs
 ):
     # 初始化会话
     session = requests.session()
@@ -56,24 +57,26 @@ def gptRequest(
     if model in ChatURLs_Norm:
         Payload = {
             'messages': messages,
-            **options
-        } if options is not None else {
-            'messages': messages
         }
     if model in ChatURLs_Paint:
         Payload = {
             'prompt': f"{messages[0]['content']}\n{messages[1]['content']}",
-            **options
-        } if options is not None else {
-            'prompt': f"{messages[0]['content']}\n{messages[1]['content']}"
         }
         stream = False # 图片生成接口不支持流式输出
-    with requests.post(
-        url = url if not stream else url.replace('/chatCompletion', '/streamChatCompletion'),
-        headers = Headers,
-        data = json.dumps(Payload),
-        stream = stream
-    ) as response:
+    Payload = {
+        **Payload,
+        **(options if options is not None else {})
+    }
+    try:
+        response = requests.post(
+            url = url if not stream else url.replace('/chatCompletion', '/streamChatCompletion'),
+            headers = Headers,
+            data = json.dumps(Payload),
+            stream = stream
+        )
+    except Exception as e:
+        yield str(e), 500
+    else:
         if response.status_code == 200:
             for chunk in response.iter_content(chunk_size = 1024 if stream else None, decode_unicode = False):
                 if chunk:
@@ -105,7 +108,8 @@ def assistantRequest(
     assistantCode: str = ...,
     messages: list = [{}],
     options: Optional[dict] = None,
-    stream: bool = True
+    stream: bool = True,
+    **kwargs
 ):
     # 初始化会话
     session = requests.session()
@@ -132,16 +136,18 @@ def assistantRequest(
     }
     Payload = {
         'messages': messages,
-        'options': options
-    } if options is not None else {
-        'messages': messages
+        **({'options': options} if options is not None else {})
     }
-    with requests.post(
-        url = url if not stream else url.replace('/chat', '/streamChat'),
-        headers = Headers,
-        data = json.dumps(Payload),
-        stream = stream
-    ) as response:
+    try:
+        response = requests.post(
+            url = url if not stream else url.replace('/chat', '/streamChat'),
+            headers = Headers,
+            data = json.dumps(Payload),
+            stream = stream
+        )
+    except Exception as e:
+        yield str(e), 500
+    else:
         if response.status_code == 200:
             for chunk in response.iter_content(chunk_size = 1024 if stream else None, decode_unicode = False):
                 if chunk:
