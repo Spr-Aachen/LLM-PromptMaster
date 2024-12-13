@@ -7,13 +7,13 @@ from typing import Optional, Union
 ##############################################################################################################################
 
 ChatURLs_Norm = {
-    'gpt-35-turbo': "chat/completions",
-    'gpt-4o': "chat/completions",
+    'gpt-35-turbo': "openai/deployments/gpt-35-turbo/chat/completions?api-version=2024-10-21",
+    'gpt-4o': "openai/deployments/gpt-4o/chat/completions?api-version=2024-10-21",
 }
 
 ChatURLs_Paint = {
-    'dall-e2': "images/generations",
-    'dall-e3': "images/generations",
+    'dall-e2': "openai/deployments/dall-e2/images/generations?api-version=2024-10-21",
+    'dall-e3': "openai/deployments/dall-e3/images/generations?api-version=2024-10-21",
 }
 
 ChatURLs = {**ChatURLs_Norm, **ChatURLs_Paint}
@@ -33,18 +33,15 @@ def gptRequest(
     session.keep_alive = False
     session.mount('http://', requests.adapters.HTTPAdapter(max_retries = 3))
     session.mount('https://', requests.adapters.HTTPAdapter(max_retries = 3))
-    # 获取令牌
-    oAuth_token = f"Bearer {apiKey}"
     # 请求GPT接口
     url = f"{gateway}/{ChatURLs[model]}"
     Headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': oAuth_token
+        'api-key': apiKey
     }
     if model in ChatURLs_Norm:
         Payload = {
-            'model': model,
             'messages': messages,
         }
     if model in ChatURLs_Paint:

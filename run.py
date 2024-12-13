@@ -27,7 +27,7 @@ def run(
     Popen(backendCMD)
     frontendDir = Path(f'{resourceDir}{os.sep}frontend').as_posix()
     frontendFile = Path(f'{frontendDir}{os.sep}main.py').as_posix()
-    frontendCMD = f'python "{frontendFile}" --profiledir "{profileDir}"'
+    frontendCMD = f'python "{frontendFile}" --host "{host}" --port {port} --profiledir "{profileDir}"'
     Popen(frontendCMD)
 
 ##############################################################################################################################

@@ -129,7 +129,7 @@ class PromptTestTool():
 
         @self._app.post("/gpt")
         async def gpt(request: Request, source: str, env: Optional[str] = None, model: str = "gpt-4o", testtimes: Optional[int] = None):
-            reqJs = await request.json()
+            reqJs: dict = await request.json()
             message = reqJs.get('message', None)
             options = reqJs.get('options', None)
             promptDir = Path(currentDir).joinpath("prompt").as_posix()
@@ -143,7 +143,7 @@ class PromptTestTool():
 
         @self._app.post("/assistant")
         async def assistant(request: Request, source: str, env: Optional[str] = None, code: Optional[str] = None, testtimes: Optional[int] = None):
-            reqJs = await request.json()
+            reqJs: dict = await request.json()
             message = reqJs.get('message', None)
             options = reqJs.get('options', None)
             promptDir = Path(currentDir).joinpath("prompt").as_posix()

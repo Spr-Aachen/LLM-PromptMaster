@@ -6,6 +6,7 @@ from .io import write_file, read_file
 ##############################################################################################################################
 
 class SourceName:
+    azure = 'azure'
     openai = 'openai'
     transsion = 'transsion'
 
@@ -16,6 +17,8 @@ def gptRequest(
 ):
     """
     """
+    if sourceName == SourceName.azure:
+        from .request_azure import gptRequest as request
     if sourceName == SourceName.openai:
         from .request_openai import gptRequest as request
     if sourceName == SourceName.transsion:
@@ -29,6 +32,8 @@ def assistantRequest(
 ):
     """
     """
+    if sourceName == SourceName.azure:
+        pass #from .request_azure import assistantRequest as request
     if sourceName == SourceName.openai:
         pass #from .request_openai import assistantRequest as request
     if sourceName == SourceName.transsion:

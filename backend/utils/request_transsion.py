@@ -1,5 +1,6 @@
 import requests
 import json
+import json_repair
 import requests.adapters
 from typing import Optional, Union
 
@@ -84,7 +85,7 @@ def gptRequest(
                     if stream:
                         buffer = "".join(line[len("data:"):] if line.startswith("data:") else line for line in buffer.splitlines()) # remove all the 'data:' suffix
                     try:
-                        parsed_content = json.loads(buffer)
+                        parsed_content = json_repair.loads(buffer)
                         #print('buffer successfully parsed:\n', buffer)
                         if model in ChatURLs_Norm:
                             result = parsed_content['choices'][0]['delta']['content'] if stream else parsed_content['data']['choices'][0]['message']['content']
@@ -155,7 +156,7 @@ def assistantRequest(
                     if stream:
                         buffer = "".join(line[len("data:"):] if line.startswith("data:") else line for line in buffer.splitlines()) # remove all the 'data:' suffix
                     try:
-                        parsed_content = json.loads(buffer)
+                        parsed_content = json_repair.loads(buffer)
                         #print('buffer successfully parsed:\n', buffer)
                         try:
                             result = parsed_content['dataObject']['choices'][0]['delta']['content'] if stream else parsed_content['data']['data']['choices'][0]['message']['content']

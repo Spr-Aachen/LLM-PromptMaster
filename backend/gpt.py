@@ -22,12 +22,12 @@ class GPTClient(object):
         self.sourceName = sourceName
 
         cf = configManager(configPath)
-        self.gateway = cf.getValue("Auth", "gateway", "")
-        self.pfGateway = cf.getValue("Auth", "pfGateway", "")
-        self.gptGateway = cf.getValue("Auth", "gptGateway", "")
-        self.apiKey = cf.getValue("Auth", "apiKey", "")
-        self.appID = cf.getValue("Auth", "appID", "")
-        self.appSecret = cf.getValue("Auth", "appSecret", "")
+        self.gateway = cf.getValue("Auth", "gateway", None)
+        self.pfGateway = cf.getValue("Auth", "pfGateway", None)
+        self.gptGateway = cf.getValue("Auth", "gptGateway", None)
+        self.apiKey = cf.getValue("Auth", "apiKey", None)
+        self.appID = cf.getValue("Auth", "appID", None)
+        self.appSecret = cf.getValue("Auth", "appSecret", None)
         self.promptPath = Path(promptDir).joinpath(cf.getValue("Chat-GPT", "promptFile")).as_posix()
         with open(self.promptPath, 'r', encoding = 'utf-8') as f:
             self.Prompt = f.read()
