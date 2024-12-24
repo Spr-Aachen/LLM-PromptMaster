@@ -4,28 +4,32 @@ import os
 import sys
 import argparse
 import json
+import json_repair
 import time
 import requests
 import pytz
 from datetime import date, datetime
 from pathlib import Path
 from typing import Optional
-from PySide6.QtCore import Qt, QObject, Signal, Slot, QThread
+from PySide6.QtCore import Qt, QObject, Signal, Slot, QThread, QSettings
 from PySide6.QtCore import QCoreApplication as QCA
 from PySide6.QtGui import QTextCursor, QAction, QStandardItem
 from PySide6.QtWidgets import *
 from QEasyWidgets import QFunctions as QFunc
 from QEasyWidgets import ComponentsSignals, Theme, EasyTheme, IconBase, Status
-from QEasyWidgets.Windows import MenuBase, InputDialogBase
+from QEasyWidgets.Windows import InputDialogBase
+from QEasyWidgets.Components import MenuBase
 
 from functions import *
-from windows.windows import *
+from windows import *
 from config import currentDir
 
 ##############################################################################################################################
 
 # 启动参数解析，启动环境，应用端口由命令行传入
 parser = argparse.ArgumentParser()
+parser.add_argument("--host", help = "主机地址",   type = str, default = "localhost")
+parser.add_argument("--port", help = "端口",       type = int, default = 8080)
 parser.add_argument("--profiledir", help = "配置目录", type = str, default = Path(currentDir).joinpath('Profile').as_posix())
 args = parser.parse_args()
 
@@ -39,11 +43,9 @@ configDir = Path(profileDir).joinpath('Config').as_posix()
 
 def chatRequest(
     #env: str = 'uat',
-    protocol: str = 'http',
-    ip: str = 'localhost',
-    port: Optional[int] = None,
-    sourceName: str = 'openai',
-    type: str = 'assistant',
+    sourceName: str = 'azure',
+    env: Optional[str] = None,
+    type: str = 'gpt',
     model: Optional[str] = None,
     code: Optional[str] = None,
     messages: list[dict] = [{}],
@@ -51,16 +53,23 @@ def chatRequest(
     testtimes: Optional[int] = None,
     stream: bool = True
 ):
+    # Check connection
+    try:
+        response = requests.get(
+            url = f"http://{args.host}:{args.port}/"
+        )
+    except Exception as e:
+        yield str(e), 404
+        return
+
     # Get token
-    if port is None:
-        port = 80 if protocol == 'http' else 443
     Headers = {
         'P-Rtoken': "...",
         'P-Auth': "...",
         "P-AppId": "..."
     }
     response = requests.get(
-        url = f"{protocol}://{ip}:{port}/auth",
+        url = f"http://{args.host}:{args.port}/auth",
         headers = Headers
     )
     if response.status_code == 200:
@@ -68,14 +77,15 @@ def chatRequest(
         Token = res_token.get("data", {})
         oAuth_token = f"Bearer {Token}"
     else:
+        oAuth_token = ""
         yield "Request failed", response.status_code
 
     # Post message
     if type == 'gpt':
-        query = f"source={sourceName}&model={'gpt-4o' if model is None else model}{f'&testtimes={testtimes}' if testtimes is not None else ''}"
+        query = f"source={sourceName}{f'&env={env}' if env is not None else ''}&model={'gpt-4o' if model is None else model}{f'&testtimes={testtimes}' if testtimes is not None else ''}"
     if type == 'assistant':
-        query = f"source={sourceName}&code={'114514' if code is None else code}{f'&testtimes={testtimes}' if testtimes is not None else ''}"
-    URL = f"{protocol}://{ip}:{port}/{type}{f'?{query}' if len(query) > 0 else ''}"
+        query = f"source={sourceName}{f'&env={env}' if env is not None else ''}&code={'114514' if code is None else code}{f'&testtimes={testtimes}' if testtimes is not None else ''}"
+    URL = f"http://{args.host}:{args.port}/{type}{f'?{query}' if len(query) > 0 else ''}"
     Headers = {
         'Authorization': oAuth_token
     }
@@ -96,7 +106,7 @@ def chatRequest(
                 if chunk:
                     content = chunk.decode('utf-8', errors = 'ignore')
                     try:
-                        parsed_content = json.loads(content)
+                        parsed_content = json_repair.loads(content)
                         result = parsed_content['data']
                         yield result, response.status_code
                     except:
@@ -105,15 +115,15 @@ def chatRequest(
             yield "Request failed", response.status_code
 
 
-def exitService(
-    protocol: str = 'http',
-    ip: str = 'localhost',
-    port: Optional[int] = None
+def delRequest(
+    
 ):
-    if port is None:
-        port = 80 if protocol == 'http' else 443
+    ''''''
+
+
+def exitService():
     with requests.post(
-        url = f"{protocol}://{ip}:{port}/actuator/shutdown"
+        url = f"http://{args.host}:{args.port}/shutdown"
     ) as response:
         return True if response.status_code == 200 else False
 
@@ -123,12 +133,9 @@ class thread_request(QThread):
     textReceived = Signal(str)
 
     def __init__(self,
-        #env: str = 'uat',
-        protocol: str = 'http',
-        ip: str = 'localhost',
-        port: Optional[int] = None,
-        sourceName: str = 'openai',
-        type: str = 'assistant',
+        sourceName: str = 'azure',
+        env: Optional[str] = None,
+        type: str = 'gpt',
         model: Optional[str] = None,
         code: Optional[str] = None,
         messages: list[dict] = [{}],
@@ -137,11 +144,8 @@ class thread_request(QThread):
     ):
         super().__init__()
 
-        #self.env = env
-        self.protocol = protocol
-        self.ip = ip
-        self.port = port
         self.sourceName = sourceName
+        self.env = env
         self.type = type
         self.model = model
         self.code = code
@@ -151,11 +155,8 @@ class thread_request(QThread):
 
     def run(self):
         for result, statuscode in chatRequest(
-            #env = self.env,
-            protocol = self.protocol,
-            ip = self.ip,
-            port = self.port,
             sourceName = self.sourceName,
+            env = self.env,
             type = self.type,
             model = self.model,
             code = self.code,
@@ -163,7 +164,7 @@ class thread_request(QThread):
             options = self.options,
             testtimes = self.testtimes
         ):
-            self.textReceived.emit(str(result) if statuscode == 200 else "请求失败")
+            self.textReceived.emit(result)
             time.sleep(0.03)
 
 ##############################################################################################################################
@@ -178,7 +179,17 @@ class MainWindow(Window_MainWindow):
     def __init__(self):
         super().__init__()
 
+        self.centralWidget().deleteLater()
+
+        self.setDockNestingEnabled(True)
+
         self.resize(900, 600)
+
+        self.settings = QSettings(self)
+
+    def closeEvent(self, event):
+        self.exitService()
+        QApplication.instance().exit()
 
     def getRoles(self):
         # Check if the prompt directory exists
@@ -406,9 +417,6 @@ class MainWindow(Window_MainWindow):
         self.createConversation() if self.ui.ListWidget_Conversation.count() == 0 else None
         ConversationName = self.ui.ListWidget_Conversation.currentItem().text()
         def blockInput(block: bool):
-            self.ui.ComboBox_Protocol.setDisabled(block)
-            self.ui.LineEdit_ip.setDisabled(block)
-            self.ui.SpinBox_port.setDisabled(block)
             self.ui.ComboBox_Type.setDisabled(block)
             self.ui.ComboBox_Model.setDisabled(block)
             self.ui.ComboBox_Role.setDisabled(block)
@@ -432,10 +440,8 @@ class MainWindow(Window_MainWindow):
         self.addMessage('user', Messages) if self.ui.ListWidget_Conversation.currentItem().text() == ConversationName else None
         # Start a new thread to send the request
         self.Thread = thread_request(
-            protocol = self.ui.ComboBox_Protocol.currentText(),
-            ip = self.ui.LineEdit_ip.text(),
-            port = self.ui.SpinBox_port.text(),
-            sourceName = 'transsion',
+            sourceName = self.ui.ComboBox_Source.currentText(),
+            env = None, #env = self.ui.ComboBox_Env.currentText(),
             type = self.ui.ComboBox_Type.currentText(),
             model = self.ui.ComboBox_Model.currentText(),
             code = self.ui.LineEdit_AssistantID.text(),
@@ -491,11 +497,7 @@ class MainWindow(Window_MainWindow):
             self.ui.TextEdit_Input.setText(Question)
 
     def exitService(self):
-        exitService(
-            protocol = self.ui.ComboBox_Protocol.currentText(),
-            ip = self.ui.LineEdit_ip.text(),
-            port = self.ui.SpinBox_port.text(),
-        )
+        exitService()
 
     def stopService(self):
         if self.Thread is not None and self.Thread.isRunning():
@@ -514,79 +516,55 @@ class MainWindow(Window_MainWindow):
         self.setWindowIcon(QIcon(QFunc.normPath(Path(currentDir).joinpath('assets/images/Logo.ico'))))
 
         # Theme toggler
-        ComponentsSignals.Signal_SetTheme.connect(
-            lambda: self.ui.CheckBox_SwitchTheme.setChecked(
-                {Theme.Light: True, Theme.Dark: False}.get(EasyTheme.THEME)
-            )
-        )
-        Function_ConfigureCheckBox(
-            checkBox = self.ui.CheckBox_SwitchTheme,
-            checkedEvents = [
-                lambda: ParamsManager_Chat.config.editConfig('Settings', 'Theme', Theme.Light),
-                lambda: ComponentsSignals.Signal_SetTheme.emit(Theme.Light) if EasyTheme.THEME != Theme.Light else None
-            ],
-            uncheckedEvents = [
-                lambda: ParamsManager_Chat.config.editConfig('Settings', 'Theme', Theme.Dark),
-                lambda: ComponentsSignals.Signal_SetTheme.emit(Theme.Dark) if EasyTheme.THEME != Theme.Dark else None
-            ],
-            takeEffect = False
-        )
+        # ComponentsSignals.Signal_SetTheme.connect(
+        #     lambda: self.ui.CheckBox_SwitchTheme.setChecked(
+        #         {Theme.Light: True, Theme.Dark: False}.get(EasyTheme.THEME)
+        #     )
+        # )
+        # Function_ConfigureCheckBox(
+        #     checkBox = self.ui.CheckBox_SwitchTheme,
+        #     checkedEvents = [
+        #         lambda: ParamsManager_Chat.config.editConfig('Settings', 'Theme', Theme.Light),
+        #         lambda: ComponentsSignals.Signal_SetTheme.emit(Theme.Light) if EasyTheme.THEME != Theme.Light else None
+        #     ],
+        #     uncheckedEvents = [
+        #         lambda: ParamsManager_Chat.config.editConfig('Settings', 'Theme', Theme.Dark),
+        #         lambda: ComponentsSignals.Signal_SetTheme.emit(Theme.Dark) if EasyTheme.THEME != Theme.Dark else None
+        #     ],
+        #     takeEffect = False
+        # )
 
-        # Window controling buttons
-        self.closed.connect(
-            lambda: (
-                self.exitService(),
-                QApplication.instance().exit()
-            )
-        )
-        self.ui.Button_Close_Window.clicked.connect(self.close)
-        self.ui.Button_Close_Window.setBorderless(True)
-        self.ui.Button_Close_Window.setTransparent(True)
-        self.ui.Button_Close_Window.setHoverBackgroundColor(QColor(210, 123, 123, 210))
-        self.ui.Button_Close_Window.setIcon(IconBase.X)
+        # Actions
+        action_ResetLayout = QAction(QCA.translate("Action", "重置布局"), self)
+        action_ResetLayout.triggered.connect(lambda: QFunc.resetLayout(self, self.settings))
 
-        self.ui.Button_Maximize_Window.clicked.connect(lambda: self.showNormal() if self.isMaximized() else self.showMaximized())
-        self.ui.Button_Maximize_Window.setBorderless(True)
-        self.ui.Button_Maximize_Window.setTransparent(True)
-        self.ui.Button_Maximize_Window.setHoverBackgroundColor(QColor(123, 123, 123, 123))
-        self.ui.Button_Maximize_Window.setIcon(IconBase.FullScreen)
+        # MenuBar
+        menuButton_Layout = QMenu(QCA.translate("Menu", "布局"))
+        menuButton_Layout.addAction(action_ResetLayout)
 
-        self.ui.Button_Minimize_Window.clicked.connect(self.showMinimized)
-        self.ui.Button_Minimize_Window.setBorderless(True)
-        self.ui.Button_Minimize_Window.setTransparent(True)
-        self.ui.Button_Minimize_Window.setHoverBackgroundColor(QColor(123, 123, 123, 123))
-        self.ui.Button_Minimize_Window.setIcon(IconBase.Dash)
+        menuButton_Help = QMenu(QCA.translate("Menu", "帮助"))
+
+        menuBar = QMenuBar()
+        menuBar.addMenu(menuButton_Layout)
+        menuBar.addSeparator()
+        menuBar.addMenu(menuButton_Help)
+        menuBar.addSeparator()
+        menuBar.setFixedWidth(menuButton_Layout.sizeHint().width() + menuButton_Help.sizeHint().width())
+        self.setMenuBar(menuBar)
 
         # Top area
-        self.ui.ToolBox.widget(0).setText(QCA.translate("ToolBox", "参数配置"))
-        self.ui.ToolBox.widget(0).expand()
+        self.ui.dockWidget_Top.setFeatures(QDockWidget.DockWidgetMovable)
+        self.ui.dockWidget_Top.setFixedHeight(self.ui.groupBox_Settings.minimumSizeHint().height())
 
-        self.ui.Label_Protocal.setText("协议")
-        self.ui.ComboBox_Protocol.addItems(['http', 'https'])
-        ParamsManager_Chat.SetParam(
-            widget = self.ui.ComboBox_Protocol,
-            section = 'Input Params',
-            option = 'Protocol',
-            defaultValue = 'http'
-        )
+        self.ui.groupBox_Settings.setTitle(QCA.translate("GroupBox", "设置"))
 
-        self.ui.Label_ip.setText("地址")
+        self.ui.Label_Source.setText("来源")
+        self.ui.ComboBox_Source.addItems(['openai', 'azure', 'transsion'])
         ParamsManager_Chat.SetParam(
-            widget = self.ui.LineEdit_ip,
+            widget = self.ui.ComboBox_Source,
             section = 'Input Params',
-            option = 'IP',
-            defaultValue = '127.0.0.1',
-            setPlaceholderText = True,
-            placeholderText = "Please enter the ip"
-        )
-
-        self.ui.Label_port.setText("端口")
-        self.ui.SpinBox_port.setRange(0, 65535)
-        ParamsManager_Chat.SetParam(
-            widget = self.ui.SpinBox_port,
-            section = 'Input Params',
-            option = 'Port',
-            defaultValue = 8080
+            option = 'Source',
+            defaultValue = 'azure'
         )
 
         self.ui.Label_Type.setText("类型")
@@ -621,6 +599,10 @@ class MainWindow(Window_MainWindow):
             option = 'Role',
             defaultValue = "无"
         )
+        self.ui.Button_ManageRole.setText("")
+        self.ui.Button_ManageRole.setToolTip("管理角色")
+        self.ui.Button_ManageRole.setIcon(IconBase.Ellipsis)
+        self.ui.Button_ManageRole.clicked.connect(self.manageRole)
 
         self.ui.Label_AssistantID.setText("ID")
         ParamsManager_Chat.SetParam(
@@ -632,12 +614,12 @@ class MainWindow(Window_MainWindow):
             placeholderText = "Please enter the assistant's ID"
         )
 
-        self.ui.Button_ManageRole.setText("")
-        self.ui.Button_ManageRole.setToolTip("管理角色")
-        self.ui.Button_ManageRole.setIcon(IconBase.Ellipsis)
-        self.ui.Button_ManageRole.clicked.connect(self.manageRole)
+        self.ui.toolBox_AdvanceSettings.widget(0).setText(QCA.translate("ToolBox", "高级设置"))
+        self.ui.toolBox_AdvanceSettings.widget(0).collapse()
 
         # Right area
+        self.ui.dockWidget_Right.setFeatures(QDockWidget.DockWidgetMovable)
+
         self.ui.splitter.setStretchFactor(0, 1)
 
         self.ui.TextEdit_Input.textChanged.connect(lambda: self.saveQuestion(self.ui.TextEdit_Input.toPlainText()))
@@ -662,6 +644,8 @@ class MainWindow(Window_MainWindow):
         self.ui.Button_Test.clicked.connect(self.queryTest)
 
         # Left area
+        self.ui.dockWidget_Left.setFeatures(QDockWidget.DockWidgetMovable)
+
         self.ui.ListWidget_Conversation.itemClicked.connect(self.loadHistory)
         self.ui.ListWidget_Conversation.setContextMenu(
             actions = {
@@ -693,6 +677,9 @@ class MainWindow(Window_MainWindow):
 
         # Set focus to input box
         self.ui.TextEdit_Input.setFocus()
+
+        # Save layout
+        QFunc.saveLayout(self, self.settings)
 
 ##############################################################################################################################
 

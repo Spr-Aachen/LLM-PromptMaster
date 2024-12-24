@@ -6,8 +6,8 @@ from QEasyWidgets import QFunctions as QFunc
 from QEasyWidgets.Windows import *
 from QEasyWidgets.Components import *
 
-from components.componenets import *
-from windows.windows import *
+from components import *
+from windows import *
 
 ##############################################################################################################################
 

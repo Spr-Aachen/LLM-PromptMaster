@@ -6,21 +6,19 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QAction, QStandardItem, QFont
 from QEasyWidgets import QFunctions as QFunc
 from QEasyWidgets.Components import ListBase
-from QEasyWidgets.Windows import ChildWindowBase, DialogBase, MessageBoxBase, InputDialogBase
+from QEasyWidgets.Windows import MainWindowBase, DialogBase, MessageBoxBase, InputDialogBase
 
-from windows.ui.UI_Window import *
+from ui import *
 
 ##############################################################################################################################
 
-class Window_MainWindow(ChildWindowBase):
-    ui = Ui_Window()
+class Window_MainWindow(MainWindowBase):
+    ui = Ui_MainWindow()
 
     def __init__(self, parent = None):
         super().__init__(parent, min_width = 1280, min_height = 720)
 
         self.ui.setupUi(self)
-
-        self.setTitleBar(self.ui.TitleBar)
 
 ##############################################################################################################################
 
