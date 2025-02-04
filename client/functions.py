@@ -1,3 +1,4 @@
+import PyEasyUtils as EasyUtils
 from typing import Union, Optional
 from PySide6.QtCore import Qt, QObject, Signal, Slot, QThread
 from PySide6.QtGui import *
@@ -86,7 +87,7 @@ def Function_AnimateStackedWidget(
 
 def Function_SetWidgetValue(
     widget: QWidget,
-    config: QFunc.configManager,
+    config: EasyUtils.configManager,
     section: str = ...,
     option: str = ...,
     value = ...,
@@ -143,7 +144,7 @@ class ParamsManager:
         configPath: str,
     ):
         self.configPath = configPath
-        self.config = QFunc.configManager(configPath)
+        self.config = EasyUtils.configManager(configPath)
 
         self.RegistratedWidgets = {}
 
@@ -171,7 +172,7 @@ class ParamsManager:
     def ClearSettings(self):
         with open(self.configPath, 'w'):
             pass
-        self.config = QFunc.configManager(self.configPath)
+        self.config = EasyUtils.configManager(self.configPath)
 
     def ResetSettings(self):
         self.ClearSettings()
@@ -179,7 +180,7 @@ class ParamsManager:
             self.ResetParam(widget)
 
     def ImportSettings(self, readPath: str):
-        configParser = QFunc.configManager(readPath).parser()
+        configParser = EasyUtils.configManager(readPath).parser()
         with open(self.configPath, 'w', encoding = 'utf-8') as config:
             configParser.write(config)
         for widget, value in list(self.RegistratedWidgets.items()):

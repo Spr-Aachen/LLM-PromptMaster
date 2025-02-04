@@ -1,13 +1,13 @@
 import sys
+import PyEasyUtils as EasyUtils
 from pathlib import Path
-from QEasyWidgets import QFunctions as QFunc
 
 ##############################################################################################################################
 
 # Check whether python file is compiled
-_, isFileCompiled = QFunc.getFileInfo()
+_, isFileCompiled = EasyUtils.getFileInfo()
 
 # Get current directory
-currentDir = QFunc.getBaseDir(__file__ if isFileCompiled == False else sys.executable)
+currentDir = EasyUtils.getBaseDir(__file__ if isFileCompiled == False else sys.executable)
 
 ##############################################################################################################################

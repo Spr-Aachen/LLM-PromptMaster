@@ -6,17 +6,17 @@ from typing import Optional, Union
 
 ##############################################################################################################################
 
-ChatURLs_Norm = {
+chatURLs_Norm = {
     'gpt-35-turbo': "openai/deployments/gpt-35-turbo/chat/completions?api-version=2024-10-21",
     'gpt-4o': "openai/deployments/gpt-4o/chat/completions?api-version=2024-10-21",
 }
 
-ChatURLs_Paint = {
+chatURLs_Paint = {
     'dall-e2': "openai/deployments/dall-e2/images/generations?api-version=2024-10-21",
     'dall-e3': "openai/deployments/dall-e3/images/generations?api-version=2024-10-21",
 }
 
-ChatURLs = {**ChatURLs_Norm, **ChatURLs_Paint}
+chatURLs = {**chatURLs_Norm, **chatURLs_Paint}
 
 
 def gptRequest(
@@ -34,17 +34,17 @@ def gptRequest(
     session.mount('http://', requests.adapters.HTTPAdapter(max_retries = 3))
     session.mount('https://', requests.adapters.HTTPAdapter(max_retries = 3))
     # 请求GPT接口
-    url = f"{gateway}/{ChatURLs[model]}"
+    url = f"{gateway}/{chatURLs[model]}"
     Headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'api-key': apiKey
     }
-    if model in ChatURLs_Norm:
+    if model in chatURLs_Norm:
         Payload = {
             'messages': messages,
         }
-    if model in ChatURLs_Paint:
+    if model in chatURLs_Paint:
         Payload = {
             'prompt': f"{messages[0]['content']}\n{messages[1]['content']}",
         }
@@ -73,9 +73,9 @@ def gptRequest(
                     try:
                         parsed_content = json_repair.loads(buffer)
                         #print('buffer successfully parsed:\n', buffer)
-                        if model in ChatURLs_Norm:
+                        if model in chatURLs_Norm:
                             result = parsed_content['choices'][0]['delta']['content'] if stream else parsed_content['choices'][0]['message']['content']
-                        if model in ChatURLs_Paint:
+                        if model in chatURLs_Paint:
                             result = parsed_content['data'][0]['url']
                         yield result, response.status_code
                     except:

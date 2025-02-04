@@ -1,5 +1,6 @@
 from typing import Optional
 
+from . import request_azure, request_openai, request_transsion
 from .auth import TokenParam, checkToken
 from .io import write_file, read_file
 
@@ -11,6 +12,13 @@ class SourceName:
     transsion = 'transsion'
 
 
+modelsInfo = {
+    SourceName.azure: list(request_azure.chatURLs.keys()),
+    SourceName.openai: list(request_openai.chatURLs.keys()),
+    SourceName.transsion: list(request_transsion.ChatURLs.keys())
+}
+
+
 def gptRequest(
     sourceName: SourceName = SourceName.openai,
     **kwargs
@@ -18,11 +26,11 @@ def gptRequest(
     """
     """
     if sourceName == SourceName.azure:
-        from .request_azure import gptRequest as request
+        request = request_azure.gptRequest
     if sourceName == SourceName.openai:
-        from .request_openai import gptRequest as request
+        request = request_openai.gptRequest
     if sourceName == SourceName.transsion:
-        from .request_transsion import gptRequest as request
+        request = request_transsion.gptRequest
     return request(**kwargs)
 
 
@@ -33,11 +41,11 @@ def assistantRequest(
     """
     """
     if sourceName == SourceName.azure:
-        pass #from .request_azure import assistantRequest as request
+        pass #request = request_azure.assistantRequest
     if sourceName == SourceName.openai:
-        pass #from .request_openai import assistantRequest as request
+        pass #request = request_openai.assistantRequest
     if sourceName == SourceName.transsion:
-        from .request_transsion import assistantRequest as request
+        request = request_transsion.assistantRequest
     return request(**kwargs)
 
 ##############################################################################################################################

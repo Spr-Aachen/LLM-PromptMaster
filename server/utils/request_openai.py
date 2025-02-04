@@ -6,17 +6,17 @@ from typing import Optional, Union
 
 ##############################################################################################################################
 
-ChatURLs_Norm = {
+chatURLs_Norm = {
     'gpt-35-turbo': "chat/completions",
     'gpt-4o': "chat/completions",
 }
 
-ChatURLs_Paint = {
+chatURLs_Paint = {
     'dall-e2': "images/generations",
     'dall-e3': "images/generations",
 }
 
-ChatURLs = {**ChatURLs_Norm, **ChatURLs_Paint}
+chatURLs = {**chatURLs_Norm, **chatURLs_Paint}
 
 
 def gptRequest(
@@ -36,18 +36,18 @@ def gptRequest(
     # 获取令牌
     oAuth_token = f"Bearer {apiKey}"
     # 请求GPT接口
-    url = f"{gateway}/{ChatURLs[model]}"
+    url = f"{gateway}/{chatURLs[model]}"
     Headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'Authorization': oAuth_token
     }
-    if model in ChatURLs_Norm:
+    if model in chatURLs_Norm:
         Payload = {
             'model': model,
             'messages': messages,
         }
-    if model in ChatURLs_Paint:
+    if model in chatURLs_Paint:
         Payload = {
             'prompt': f"{messages[0]['content']}\n{messages[1]['content']}",
         }
@@ -76,9 +76,9 @@ def gptRequest(
                     try:
                         parsed_content = json_repair.loads(buffer)
                         #print('buffer successfully parsed:\n', buffer)
-                        if model in ChatURLs_Norm:
+                        if model in chatURLs_Norm:
                             result = parsed_content['choices'][0]['delta']['content'] if stream else parsed_content['choices'][0]['message']['content']
-                        if model in ChatURLs_Paint:
+                        if model in chatURLs_Paint:
                             result = parsed_content['data'][0]['url']
                         yield result, response.status_code
                     except:

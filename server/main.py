@@ -15,7 +15,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from typing import Union, Optional, List
 from pathlib import Path
 
-from utils import TokenParam, checkToken, write_file
+from utils import TokenParam, checkToken, write_file, modelsInfo
 from gpt import GPTClient
 from assistant import AssistantClient
 
@@ -126,6 +126,10 @@ class PromptTestTool():
         @self._app.get("/")
         async def default():
             return "Welcome To Prompt Test Service!"
+
+        @self._app.get("/info")
+        async def init():
+            return {"modelsInfo": modelsInfo}
 
         @self._app.post("/gpt")
         async def gpt(request: Request, source: str, env: Optional[str] = None, model: str = "gpt-4o", testtimes: Optional[int] = None):

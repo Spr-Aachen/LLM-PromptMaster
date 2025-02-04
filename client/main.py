@@ -8,6 +8,7 @@ import json_repair
 import time
 import requests
 import pytz
+import PyEasyUtils as EasyUtils
 from datetime import date, datetime
 from pathlib import Path
 from typing import Optional
@@ -41,6 +42,35 @@ configDir = Path(profileDir).joinpath('Config').as_posix()
 
 ##############################################################################################################################
 
+def isConnected(
+    host: str,
+    port: int,
+):
+    # Check connection
+    try:
+        response = requests.get(
+            url = f"http://{host}:{port}/"
+        )
+        return True
+    except Exception as e:
+        yield str(e), 404
+        return False
+
+
+def initRequest():
+    if not isConnected(args.host, args.port):
+        return
+
+    # Get model info
+    response = requests.get(
+        url = f"http://{args.host}:{args.port}/info"
+    )
+    if response.status_code == 200:
+        res_info = response.json()
+        modelsInfo: dict = res_info.get("modelsInfo", {})
+        return modelsInfo
+
+
 def chatRequest(
     #env: str = 'uat',
     sourceName: str = 'azure',
@@ -53,13 +83,7 @@ def chatRequest(
     testtimes: Optional[int] = None,
     stream: bool = True
 ):
-    # Check connection
-    try:
-        response = requests.get(
-            url = f"http://{args.host}:{args.port}/"
-        )
-    except Exception as e:
-        yield str(e), 404
+    if not isConnected(args.host, args.port):
         return
 
     # Get token
@@ -129,7 +153,7 @@ def exitService():
 
 ##############################################################################################################################
 
-class thread_request(QThread):
+class thread_chatRequest(QThread):
     textReceived = Signal(str)
 
     def __init__(self,
@@ -265,7 +289,7 @@ class MainWindow(Window_MainWindow):
             content = str(message['content']).strip()
             if len(content) == 0:
                 continue
-            content = QFunc.toMarkdown(content)
+            content = EasyUtils.toMarkdown(content)
             Message[role] = content
             Messages.append(Message)
         self.ui.MessageBrowser.setMessages(
@@ -334,7 +358,7 @@ class MainWindow(Window_MainWindow):
         formatted_time = datetime.now(beijing_timezone).strftime("%Y_%m_%d_%H_%M_%S")
         # Check if the path would be overwritten
         FilePath = Path(conversationDir).joinpath(f"{formatted_time}.txt")
-        FilePath = QFunc.renameIfExists(FilePath)
+        FilePath = EasyUtils.renameIfExists(FilePath)
         FileName = Path(FilePath).name
         ConversationName = Path(FilePath).stem
         # Update the history file path and the question file path
@@ -389,7 +413,7 @@ class MainWindow(Window_MainWindow):
             content = str(message['content']).strip()
             if role != currentRole or len(content) == 0:
                 continue
-            content = QFunc.toMarkdown(content)
+            content = EasyUtils.toMarkdown(content)
             self.ui.MessageBrowser.addMessage(
                 content,
                 isSent = False if currentRole == 'assistant' else True,
@@ -439,7 +463,7 @@ class MainWindow(Window_MainWindow):
         # Update user message
         self.addMessage('user', Messages) if self.ui.ListWidget_Conversation.currentItem().text() == ConversationName else None
         # Start a new thread to send the request
-        self.Thread = thread_request(
+        self.Thread = thread_chatRequest(
             sourceName = self.ui.ComboBox_Source.currentText(),
             env = None, #env = self.ui.ComboBox_Env.currentText(),
             type = self.ui.ComboBox_Type.currentText(),
@@ -508,12 +532,14 @@ class MainWindow(Window_MainWindow):
         )
 
     def main(self):
+        modelInfos = initRequest()
+
         # Chat - ParamsManager
-        Path_Config_Chat = QFunc.normPath(Path(configDir).joinpath('Config_Chat.ini'))
+        Path_Config_Chat = EasyUtils.normPath(Path(configDir).joinpath('Config_Chat.ini'))
         ParamsManager_Chat = ParamsManager(Path_Config_Chat)
 
         # Logo
-        self.setWindowIcon(QIcon(QFunc.normPath(Path(currentDir).joinpath('assets/images/Logo.ico'))))
+        self.setWindowIcon(QIcon(EasyUtils.normPath(Path(currentDir).joinpath('assets/images/Logo.ico'))))
 
         # Theme toggler
         # ComponentsSignals.Signal_SetTheme.connect(
@@ -559,12 +585,18 @@ class MainWindow(Window_MainWindow):
         self.ui.groupBox_Settings.setTitle(QCA.translate("GroupBox", "设置"))
 
         self.ui.Label_Source.setText("来源")
-        self.ui.ComboBox_Source.addItems(['openai', 'azure', 'transsion'])
+        self.ui.ComboBox_Source.currentTextChanged.connect(
+            lambda text: (
+                self.ui.ComboBox_Model.clear(),
+                self.ui.ComboBox_Model.addItems(list(modelInfos[text]))
+            )
+        )
+        self.ui.ComboBox_Source.addItems(list(modelInfos.keys()))
         ParamsManager_Chat.SetParam(
             widget = self.ui.ComboBox_Source,
             section = 'Input Params',
             option = 'Source',
-            defaultValue = 'azure'
+            defaultValue = None
         )
 
         self.ui.Label_Type.setText("类型")
@@ -582,12 +614,11 @@ class MainWindow(Window_MainWindow):
         )
 
         self.ui.Label_Model.setText("模型")
-        self.ui.ComboBox_Model.addItems(['gpt-4o', 'gemini-1.5-pro-001', 'moonshot-v1-128k', 'claude-3-5-sonnet@20240620', 'dall-e3'])
         ParamsManager_Chat.SetParam(
             widget = self.ui.ComboBox_Model,
             section = 'Input Params',
             option = 'Model',
-            defaultValue = 'gpt-4o'
+            defaultValue = None
         )
 
         self.ui.Label_Role.setText("角色")
@@ -686,7 +717,7 @@ class MainWindow(Window_MainWindow):
 if __name__ == '__main__':
     App = QApplication(sys.argv)
 
-    SC = QSplashScreen(QPixmap(QFunc.normPath(Path(currentDir).joinpath('assets/images/others/SplashScreen.png'))))
+    SC = QSplashScreen(QPixmap(EasyUtils.normPath(Path(currentDir).joinpath('assets/images/others/SplashScreen.png'))))
     SC.show()
 
     window = MainWindow()
