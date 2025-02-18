@@ -50,24 +50,6 @@ class Ui_MainWindow(object):
 
         self.gridLayout_34.addLayout(self.Layout_Type, 0, 0, 1, 1)
 
-        self.Layout_Model = QHBoxLayout()
-        self.Layout_Model.setSpacing(12)
-        self.Layout_Model.setObjectName(u"Layout_Model")
-        self.Label_Model = LabelBase(self.groupBox_Settings)
-        self.Label_Model.setObjectName(u"Label_Model")
-
-        self.Layout_Model.addWidget(self.Label_Model)
-
-        self.ComboBox_Model = ComboBoxBase(self.groupBox_Settings)
-        self.ComboBox_Model.setObjectName(u"ComboBox_Model")
-        sizePolicy.setHeightForWidth(self.ComboBox_Model.sizePolicy().hasHeightForWidth())
-        self.ComboBox_Model.setSizePolicy(sizePolicy)
-
-        self.Layout_Model.addWidget(self.ComboBox_Model)
-
-
-        self.gridLayout_34.addLayout(self.Layout_Model, 0, 1, 1, 1)
-
         self.Layout_Source = QHBoxLayout()
         self.Layout_Source.setSpacing(12)
         self.Layout_Source.setObjectName(u"Layout_Source")
@@ -84,7 +66,7 @@ class Ui_MainWindow(object):
         self.Layout_Source.addWidget(self.ComboBox_Source)
 
 
-        self.gridLayout_34.addLayout(self.Layout_Source, 0, 2, 1, 1)
+        self.gridLayout_34.addLayout(self.Layout_Source, 0, 1, 1, 1)
 
         self.StackedWidget_TypeParams = QStackedWidget(self.groupBox_Settings)
         self.StackedWidget_TypeParams.setObjectName(u"StackedWidget_TypeParams")
@@ -158,7 +140,7 @@ class Ui_MainWindow(object):
         self.toolBox_AdvanceSettings.setObjectName(u"toolBox_AdvanceSettings")
         self.ToolPage = WidgetBase()
         self.ToolPage.setObjectName(u"ToolPage")
-        self.ToolPage.setGeometry(QRect(0, 0, 774, 69))
+        self.ToolPage.setGeometry(QRect(0, 0, 774, 54))
         self.gridLayout_35 = QGridLayout(self.ToolPage)
         self.gridLayout_35.setObjectName(u"gridLayout_35")
         self.gridLayout_35.setHorizontalSpacing(21)
@@ -184,11 +166,29 @@ class Ui_MainWindow(object):
 
         self.gridLayout_34.addWidget(self.toolBox_AdvanceSettings, 1, 0, 1, 4)
 
+        self.Layout_Model = QHBoxLayout()
+        self.Layout_Model.setSpacing(12)
+        self.Layout_Model.setObjectName(u"Layout_Model")
+        self.Label_Model = LabelBase(self.groupBox_Settings)
+        self.Label_Model.setObjectName(u"Label_Model")
+
+        self.Layout_Model.addWidget(self.Label_Model)
+
+        self.ComboBox_Model = ComboBoxBase(self.groupBox_Settings)
+        self.ComboBox_Model.setObjectName(u"ComboBox_Model")
+        sizePolicy.setHeightForWidth(self.ComboBox_Model.sizePolicy().hasHeightForWidth())
+        self.ComboBox_Model.setSizePolicy(sizePolicy)
+
+        self.Layout_Model.addWidget(self.ComboBox_Model)
+
+
+        self.gridLayout_34.addLayout(self.Layout_Model, 0, 2, 1, 1)
+
 
         self.gridLayout_3.addWidget(self.groupBox_Settings, 0, 0, 1, 1)
 
         self.dockWidget_Top.setWidget(self.dockWidgetContents_3)
-        MainWindow.addDockWidget(Qt.TopDockWidgetArea, self.dockWidget_Top)
+        MainWindow.addDockWidget(Qt.DockWidgetArea.TopDockWidgetArea, self.dockWidget_Top)
         self.dockWidget_Left = DockWidgetBase(MainWindow)
         self.dockWidget_Left.setObjectName(u"dockWidget_Left")
         self.dockWidgetContents = QWidget()
@@ -213,7 +213,7 @@ class Ui_MainWindow(object):
         self.gridLayout.addWidget(self.Button_CreateConversation, 2, 0, 1, 1)
 
         self.dockWidget_Left.setWidget(self.dockWidgetContents)
-        MainWindow.addDockWidget(Qt.LeftDockWidgetArea, self.dockWidget_Left)
+        MainWindow.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.dockWidget_Left)
         self.dockWidget_Right = DockWidgetBase(MainWindow)
         self.dockWidget_Right.setObjectName(u"dockWidget_Right")
         self.dockWidgetContents_2 = QWidget()
@@ -233,13 +233,13 @@ class Ui_MainWindow(object):
 "	background: transparent;\n"
 "	border: none;\n"
 "}")
-        self.splitter.setOrientation(Qt.Vertical)
+        self.splitter.setOrientation(Qt.Orientation.Vertical)
         self.splitter.setHandleWidth(6)
         self.MessageBrowser = ChatWidgetBase(self.splitter)
         self.MessageBrowser.setObjectName(u"MessageBrowser")
         self.MessageBrowser.setMinimumSize(QSize(0, 123))
-        self.MessageBrowser.setFrameShape(QFrame.StyledPanel)
-        self.MessageBrowser.setFrameShadow(QFrame.Raised)
+        self.MessageBrowser.setFrameShape(QFrame.Shape.StyledPanel)
+        self.MessageBrowser.setFrameShadow(QFrame.Shadow.Raised)
         self.splitter.addWidget(self.MessageBrowser)
         self.TextEdit_Input = TextEditBase(self.splitter)
         self.TextEdit_Input.setObjectName(u"TextEdit_Input")
@@ -290,7 +290,7 @@ class Ui_MainWindow(object):
         self.gridLayout_2.addWidget(self.StackedWidget_SendAndStop, 2, 0, 1, 1)
 
         self.dockWidget_Right.setWidget(self.dockWidgetContents_2)
-        MainWindow.addDockWidget(Qt.RightDockWidgetArea, self.dockWidget_Right)
+        MainWindow.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dockWidget_Right)
 
         self.retranslateUi(MainWindow)
 
@@ -306,13 +306,13 @@ class Ui_MainWindow(object):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
         self.groupBox_Settings.setTitle(QCoreApplication.translate("MainWindow", u"GroupBox", None))
         self.Label_Type.setText(QCoreApplication.translate("MainWindow", u"TextLabel", None))
-        self.Label_Model.setText(QCoreApplication.translate("MainWindow", u"TextLabel", None))
         self.Label_Source.setText(QCoreApplication.translate("MainWindow", u"TextLabel", None))
         self.Label_Role.setText(QCoreApplication.translate("MainWindow", u"TextLabel", None))
         self.Button_ManageRole.setText(QCoreApplication.translate("MainWindow", u"PushButton", None))
         self.Label_AssistantID.setText(QCoreApplication.translate("MainWindow", u"TextLabel", None))
         self.Label_rag.setText(QCoreApplication.translate("MainWindow", u"TextLabel", None))
         self.toolBox_AdvanceSettings.setItemText(self.toolBox_AdvanceSettings.indexOf(self.ToolPage), QCoreApplication.translate("MainWindow", u"Page 1", None))
+        self.Label_Model.setText(QCoreApplication.translate("MainWindow", u"TextLabel", None))
         self.Button_ClearConversations.setText(QCoreApplication.translate("MainWindow", u"PushButton", None))
         self.Button_CreateConversation.setText(QCoreApplication.translate("MainWindow", u"PushButton", None))
         self.Button_Load.setText(QCoreApplication.translate("MainWindow", u"PushButton", None))
