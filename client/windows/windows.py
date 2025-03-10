@@ -16,9 +16,12 @@ class Window_MainWindow(MainWindowBase):
     ui = Ui_MainWindow()
 
     def __init__(self, parent = None):
-        super().__init__(parent, min_width = 1280, min_height = 720)
+        super().__init__(parent, min_width = 900, min_height = 600)
 
         self.ui.setupUi(self)
+
+        self.centralWidget().deleteLater()
+        self.setDockNestingEnabled(True)
 
 ##############################################################################################################################
 

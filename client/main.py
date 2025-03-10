@@ -17,7 +17,7 @@ from PySide6.QtCore import QCoreApplication as QCA
 from PySide6.QtGui import QTextCursor, QAction, QStandardItem
 from PySide6.QtWidgets import *
 from QEasyWidgets import QFunctions as QFunc
-from QEasyWidgets import ComponentsSignals, Theme, EasyTheme, IconBase, Status
+from QEasyWidgets import ComponentsSignals, Theme, IconBase, Status
 from QEasyWidgets.Windows import InputDialogBase
 from QEasyWidgets.Components import MenuBase
 
@@ -202,12 +202,6 @@ class MainWindow(Window_MainWindow):
 
     def __init__(self):
         super().__init__()
-
-        self.centralWidget().deleteLater()
-
-        self.setDockNestingEnabled(True)
-
-        self.resize(900, 600)
 
         self.settings = QSettings(self)
 
@@ -534,9 +528,9 @@ class MainWindow(Window_MainWindow):
     def main(self):
         modelInfos = initRequest()
 
-        # Chat - ParamsManager
-        Path_Config_Chat = EasyUtils.normPath(Path(configDir).joinpath('Config_Chat.ini'))
-        ParamsManager_Chat = ParamsManager(Path_Config_Chat)
+        # ParamsManager
+        configPath = EasyUtils.normPath(Path(configDir).joinpath('config.ini'))
+        paramsManager = ParamsManager(configPath)
 
         # Logo
         self.setWindowIcon(QIcon(EasyUtils.normPath(Path(currentDir).joinpath('assets/images/Logo.ico'))))
@@ -544,18 +538,18 @@ class MainWindow(Window_MainWindow):
         # Theme toggler
         # ComponentsSignals.Signal_SetTheme.connect(
         #     lambda: self.ui.CheckBox_SwitchTheme.setChecked(
-        #         {Theme.Light: True, Theme.Dark: False}.get(EasyTheme.THEME)
+        #         {Theme.Light: True, Theme.Dark: False}.get(currentTheme())
         #     )
         # )
         # Function_ConfigureCheckBox(
         #     checkBox = self.ui.CheckBox_SwitchTheme,
         #     checkedEvents = [
-        #         lambda: ParamsManager_Chat.config.editConfig('Settings', 'Theme', Theme.Light),
-        #         lambda: ComponentsSignals.Signal_SetTheme.emit(Theme.Light) if EasyTheme.THEME != Theme.Light else None
+        #         lambda: paramsManager.config.editConfig('Settings', 'Theme', Theme.Light),
+        #         lambda: ComponentsSignals.Signal_SetTheme.emit(Theme.Light) if currentTheme() != Theme.Light else None
         #     ],
         #     uncheckedEvents = [
-        #         lambda: ParamsManager_Chat.config.editConfig('Settings', 'Theme', Theme.Dark),
-        #         lambda: ComponentsSignals.Signal_SetTheme.emit(Theme.Dark) if EasyTheme.THEME != Theme.Dark else None
+        #         lambda: paramsManager.config.editConfig('Settings', 'Theme', Theme.Dark),
+        #         lambda: ComponentsSignals.Signal_SetTheme.emit(Theme.Dark) if currentTheme() != Theme.Dark else None
         #     ],
         #     takeEffect = False
         # )
@@ -578,6 +572,10 @@ class MainWindow(Window_MainWindow):
         menuBar.setFixedWidth(menuButton_Layout.sizeHint().width() + menuButton_Help.sizeHint().width())
         self.setMenuBar(menuBar)
 
+        # Chat - ParamsManager
+        configPath_chat = EasyUtils.normPath(Path(configDir).joinpath('config_chat.ini'))
+        paramsManager_chat = ParamsManager(configPath_chat)
+
         # Top area
         self.ui.dockWidget_Top.setFeatures(QDockWidget.DockWidgetMovable)
         self.ui.dockWidget_Top.setFixedHeight(self.ui.groupBox_Settings.minimumSizeHint().height())
@@ -592,7 +590,7 @@ class MainWindow(Window_MainWindow):
             )
         )
         self.ui.ComboBox_Source.addItems(list(modelInfos.keys()))
-        ParamsManager_Chat.SetParam(
+        paramsManager_chat.setParam(
             widget = self.ui.ComboBox_Source,
             section = 'Input Params',
             option = 'Source',
@@ -606,7 +604,7 @@ class MainWindow(Window_MainWindow):
                 self.ui.StackedWidget_TypeParams.setCurrentIndex(0 if Text == 'gpt' else 1),
             )
         )
-        ParamsManager_Chat.SetParam(
+        paramsManager_chat.setParam(
             widget = self.ui.ComboBox_Type,
             section = 'Input Params',
             option = 'Role',
@@ -614,7 +612,7 @@ class MainWindow(Window_MainWindow):
         )
 
         self.ui.Label_Model.setText("模型")
-        ParamsManager_Chat.SetParam(
+        paramsManager_chat.setParam(
             widget = self.ui.ComboBox_Model,
             section = 'Input Params',
             option = 'Model',
@@ -624,7 +622,7 @@ class MainWindow(Window_MainWindow):
         self.ui.Label_Role.setText("角色")
         self.ui.ComboBox_Role.addItems(list(self.getRoles().keys()))
         self.ui.ComboBox_Role.activated.connect(self.applyRole)
-        ParamsManager_Chat.SetParam(
+        paramsManager_chat.setParam(
             widget = self.ui.ComboBox_Role,
             section = 'Input Params',
             option = 'Role',
@@ -636,7 +634,7 @@ class MainWindow(Window_MainWindow):
         self.ui.Button_ManageRole.clicked.connect(self.manageRole)
 
         self.ui.Label_AssistantID.setText("ID")
-        ParamsManager_Chat.SetParam(
+        paramsManager_chat.setParam(
             widget = self.ui.LineEdit_AssistantID,
             section = 'Input Params',
             option = 'AssistantID',
@@ -695,7 +693,7 @@ class MainWindow(Window_MainWindow):
         self.loadHistories()
 
         # Set Theme
-        ComponentsSignals.Signal_SetTheme.emit(ParamsManager_Chat.config.getValue('Settings', 'Theme', Theme.Auto))
+        ComponentsSignals.Signal_SetTheme.emit(paramsManager_chat.config.getValue('Settings', 'Theme', Theme.Auto))
 
         # Show window
         self.show()

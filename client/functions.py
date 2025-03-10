@@ -8,7 +8,6 @@ from QEasyWidgets.Windows import *
 from QEasyWidgets.Components import *
 
 from components import *
-from windows import *
 
 ##############################################################################################################################
 
@@ -48,11 +47,11 @@ def Function_ConfigureCheckBox(
         uncheckedEvents.append(lambda: checkBox.setText(uncheckedText))
 
     checkBox.toggled.connect(
-        lambda IsChecked: QFunc.runEvents(checkedEvents if IsChecked else uncheckedEvents)
+        lambda IsChecked: EasyUtils.runEvents(checkedEvents if IsChecked else uncheckedEvents)
     )
 
-    QFunc.runEvents(checkedEvents) if takeEffect and checkBox.isChecked() else None
-    QFunc.runEvents(uncheckedEvents) if takeEffect and not checkBox.isChecked() else None
+    EasyUtils.runEvents(checkedEvents) if takeEffect and checkBox.isChecked() else None
+    EasyUtils.runEvents(uncheckedEvents) if takeEffect and not checkBox.isChecked() else None
 
 ##############################################################################################################################
 
@@ -151,7 +150,7 @@ class ParamsManager:
     def registrate(self, widget: QWidget, value: tuple):
         self.RegistratedWidgets[widget] = value
 
-    def SetParam(self,
+    def setParam(self,
         widget: QWidget,
         section: str = ...,
         option: str = ...,
@@ -165,28 +164,28 @@ class ParamsManager:
         Function_SetWidgetValue(widget, self.config, section, option, value, times, setPlaceholderText, placeholderText)
         self.registrate(widget, (section, option, defaultValue, times, setPlaceholderText, placeholderText)) if registrate else None
 
-    def ResetParam(self, widget: QWidget):
+    def resetParam(self, widget: QWidget):
         value = self.RegistratedWidgets[widget]
         Function_SetWidgetValue(widget, self.config, *value)
 
-    def ClearSettings(self):
+    def clearSettings(self):
         with open(self.configPath, 'w'):
             pass
         self.config = EasyUtils.configManager(self.configPath)
 
-    def ResetSettings(self):
-        self.ClearSettings()
+    def resetSettings(self):
+        self.clearSettings()
         for widget in list(self.RegistratedWidgets.keys()):
-            self.ResetParam(widget)
+            self.resetParam(widget)
 
-    def ImportSettings(self, readPath: str):
+    def importSettings(self, readPath: str):
         configParser = EasyUtils.configManager(readPath).parser()
         with open(self.configPath, 'w', encoding = 'utf-8') as config:
             configParser.write(config)
         for widget, value in list(self.RegistratedWidgets.items()):
-            self.SetParam(widget, *value)
+            self.setParam(widget, *value)
 
-    def ExportSettings(self, savePath: str):
+    def exportSettings(self, savePath: str):
         with open(savePath, 'w', encoding = 'utf-8') as config:
             self.config.parser().write(config)
 
