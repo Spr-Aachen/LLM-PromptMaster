@@ -1,9 +1,9 @@
 import PyEasyUtils as EasyUtils
 from typing import Union, Optional
-from PySide6.QtCore import Qt, QObject, Signal, Slot, QThread
+from PySide6.QtCore import Qt, QObject, Signal, QThreadPool
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
-from QEasyWidgets import QFunctions as QFunc
+from QEasyWidgets import QFunctions as QFunc, QWorker
 from QEasyWidgets.Windows import *
 from QEasyWidgets.Components import *
 
@@ -188,5 +188,198 @@ class ParamsManager:
     def exportSettings(self, savePath: str):
         with open(savePath, 'w', encoding = 'utf-8') as config:
             self.config.parser().write(config)
+
+##############################################################################################################################
+
+def Function_GetParam(
+    ui: QObject
+):
+    '''
+    Function to get the param of ui
+    '''
+    if isinstance(ui, (QLineEdit, QTextEdit, QPlainTextEdit)):
+        return QFunc.getText(ui)
+    if isinstance(ui, QComboBox):
+        return ui.currentText()
+    if isinstance(ui, (QAbstractSpinBox, QSlider)):
+        return ui.value()
+    if isinstance(ui, (QCheckBox, QRadioButton)):
+        return ui.isChecked()
+
+
+def Function_SetParam(
+    ui: QObject,
+    param: Optional[str]
+):
+    '''
+    Function to set the param of ui
+    '''
+    if isinstance(ui, (QLineEdit, QTextEdit)):
+        ui.setText(param)
+    if isinstance(ui, QPlainTextEdit):
+        ui.setPlainText(param)
+    if isinstance(ui, QComboBox):
+        ui.setCurrentText(param)
+    if isinstance(ui, (QAbstractSpinBox, QSlider)):
+        ui.setValue(param)
+    if isinstance(ui, (QCheckBox, QRadioButton)):
+        ui.setChecked(param)
+
+
+def Function_ParamsChecker(
+    paramTarget: object,
+    emptyAllowed: bool
+):
+    '''
+    Function to return handled param
+    '''
+    param = Function_GetParam(paramTarget) if isinstance(paramTarget, QWidget) else paramTarget
+    if isinstance(param, str):
+        if param.strip() == "None" or param.strip() == "":
+            if emptyAllowed:
+                param = None
+            else:
+                MessageBoxBase.pop(
+                    messageType = QMessageBox.Warning,
+                    windowTitle = "Warning",
+                    text = "Empty param detected!\n检测到参数空缺！"
+                )
+                return "Abort"
+        else:
+            '''
+            if "，" in param or "," in param:
+                param = re.split(
+                    pattern = '[，,]',
+                    string = param,
+                    maxsplit = 0
+                )
+            '''
+    if isinstance(param, dict):
+        if "None" in list(param.keys()&param.values()) or "" in list(param.keys()&param.values()):
+            if emptyAllowed:
+                param = None
+            else:
+                MessageBoxBase.pop(
+                    messageType = QMessageBox.Warning,
+                    windowTitle = "Warning",
+                    text = "Empty param detected!\n检测到参数空缺！"
+                )
+                return "Abort"
+        else:
+            pass
+
+    return param
+
+##############################################################################################################################
+
+class TaskStatus:
+    Started = 'Started'
+    Finished = 'Finished'
+    Failed = 'Failed'
+
+
+class WorkerManager(QWorker.WorkerManager):
+    def __init__(self,
+        executeMethod: object = ...,
+        executeParams: Optional[dict] = None,
+        terminateMethod: Optional[object] = None,
+        threadPool: Optional[QThreadPool] = None,
+    ):
+        super().__init__(executeMethod, terminateMethod, threadPool)
+
+        self.executeMethodName = executeMethod.__qualname__
+        self.executeParams = executeParams
+
+        self.signals = QWorker.WorkerSignals()
+        self.worker.signals.started.connect(self.signals.started.emit)
+        self.worker.signals.result.connect(self.signals.result.emit)
+        self.worker.signals.finished.connect(self.signals.finished.emit)
+        self.signals.started.connect(
+            lambda: FunctionSignals.Signal_TaskStatus.emit(self.executeMethodName, TaskStatus.Started)
+        )
+        self.signals.error.connect(
+            lambda: FunctionSignals.Signal_TaskStatus.emit(self.executeMethodName, TaskStatus.Failed)
+        )
+        self.signals.finished.connect(
+            lambda: FunctionSignals.Signal_TaskStatus.emit(self.executeMethodName, TaskStatus.Finished)
+        )
+
+        FunctionSignals.Signal_ForceQuit.connect(self.terminate)
+
+    def _validateParams(self, unvalidatedParams):
+        validatedParams = []
+        if unvalidatedParams is not None:
+            unvalidatedParams = [(unvalidatedParam, unvalidatedParams[unvalidatedParam] if isinstance(unvalidatedParams, dict) else True) for unvalidatedParam in EasyUtils.toIterable(unvalidatedParams)]
+            for paramTarget, emptyAllowed in unvalidatedParams:
+                param = Function_ParamsChecker(paramTarget, emptyAllowed)
+                if param == "Abort":
+                    return print("Aborted.")
+                else:
+                    pass #print("Continued.\n")
+                validatedParams.append(param)
+        return validatedParams
+
+    def execute(self):
+        super().execute(*self._validateParams(self.executeParams))
+
+    def terminate(self):
+        super().terminate()
+        FunctionSignals.Signal_TaskStatus.emit(self.executeMethodName, TaskStatus.Failed)
+
+
+def Function_SetMethodExecutor(
+    executeMethod: object = ...,
+    executeParams: Optional[dict] = None,
+    executeButton: Optional[QAbstractButton] = None,
+    terminateMethod: Optional[object] = None,
+    terminateButton: Optional[QAbstractButton] = None,
+    successEvents: Optional[list] = None,
+    threadPool: Optional[QThreadPool] = None,
+    parentWindow: Optional[QWidget] = None,
+):
+    '''
+    '''
+    workerManager = WorkerManager(executeMethod, executeParams, terminateMethod, threadPool)
+
+    workerManager.signals.started.connect(
+        lambda: (
+            Function_AnimateStackedWidget(QFunc.findParent(executeButton, QStackedWidget), target = 1) if terminateButton else None
+        )
+    )
+    workerManager.signals.error.connect(
+        lambda err: (
+            EasyUtils.runEvents(successEvents) if successEvents is not None else None,
+            MessageBoxBase.pop(parentWindow, QMessageBox.Warning, "Failure", "发生异常", err)
+        )
+    )
+    workerManager.signals.finished.connect(
+        lambda: (
+            Function_AnimateStackedWidget(QFunc.findParent(executeButton, QStackedWidget), target = 0) if terminateButton else None
+        )
+    )
+
+    # Execution
+    if executeButton is not None:
+        executeButton.clicked.connect(workerManager.execute)
+    else:
+        tempButton = QPushButton(parentWindow)
+        tempButton.clicked.connect(workerManager.terminate)
+        tempButton.setVisible(False)
+        tempButton.click()
+        workerManager.signals.finished.connect(tempButton.deleteLater)
+
+    # Termination
+    if terminateButton is not None:
+        terminateButton.clicked.connect(
+            lambda: MessageBoxBase.pop(parentWindow,
+                messageType = QMessageBox.Question,
+                windowTitle = "Ask",
+                text = "当前任务仍在执行中，是否确认终止？",
+                buttons = QMessageBox.Yes|QMessageBox.No,
+                buttonEvents = {QMessageBox.Yes: workerManager.terminate}
+            )
+        )
+    else:
+        pass
 
 ##############################################################################################################################
