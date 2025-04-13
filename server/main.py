@@ -47,14 +47,14 @@ class PromptTestTool:
     """
     """
     def __init__(self, title, version: str, description: str):
-        # App definition
+        # Initialize app
         self._app = FastAPI(
             title = title,
             version = version,
             description = description,
         )
 
-        # Set all CORS
+        # Set CORS
         self._app.add_middleware(
             middleware_class = CORSMiddleware,
             allow_origins = ["*"],
@@ -141,8 +141,8 @@ class PromptTestTool:
             #return {"message": "Shutting down, bye..."}
 
     def setChatActuator(self):
-        @self._app.get("/info")
-        async def init():
+        @self._app.get("/getModelsInfo")
+        async def getModelsInfo():
             return modelsInfo
 
         @self._app.get("/loadPrompts")
@@ -221,7 +221,7 @@ class PromptTestTool:
             reqJs: dict = await request.json()
             message = reqJs.get('message', None)
             options = reqJs.get('options', None)
-            messages = self.chatManager._getConversationNameAndMessages(historyID)[1] + [message]
+            messages = self.chatManager.getHistory(historyID)[0] + [message]
             promptDir = Path(currentDir).joinpath("prompt").as_posix()
             configPath = Path(currentDir).joinpath("config", source, f"config-{env.strip()}.ini" if env is not None else "config.ini").as_posix()
             gptClient = GPTClient(source, configPath, promptDir)
@@ -236,7 +236,7 @@ class PromptTestTool:
             reqJs: dict = await request.json()
             message = reqJs.get('message', None)
             options = reqJs.get('options', None)
-            messages = self.chatManager._getConversationNameAndMessages(historyID)[1] + [message]
+            messages = self.chatManager.getHistory(historyID)[0] + [message]
             promptDir = Path(currentDir).joinpath("prompt").as_posix()
             configPath = Path(currentDir).joinpath("config", source, f"config-{env.strip()}.ini" if env is not None else "config.ini").as_posix()
             assistantClient = AssistantClient(source, configPath, promptDir)

@@ -23,10 +23,10 @@ class ChatManager:
     def _setFilePath(self, dir, id, name):
         return Path(dir).joinpath(f"{id}_{name}.txt").as_posix()
 
-    def _updatePromptDict(self, promptID, promptName, prompt):
-        self.promptDict[promptID] = (promptName, prompt)
+    def _updatePromptDict(self, promptID, promptName):
+        self.promptDict[promptID] = promptName
 
-    def _getPromptNameAndPrompt(self, promptID):
+    def _getPromptName(self, promptID):
         return self.promptDict[promptID]
 
     def _getPromptFilePath(self, promptID, promptName):
@@ -46,14 +46,12 @@ class ChatManager:
                 # if os.path.getsize(promptFilePath) == 0: # Remove empty files
                 #     os.remove(promptFilePath)
                 #     continue
-                with open(promptFilePath, 'r', encoding = 'utf-8') as f:
-                    prompt = f.read()
                 promptID, promptName = self._getPromptIDAndPromptName(promptFilePath)
-                self._updatePromptDict(promptID, promptName, prompt)
-        return {promptID: promptName for promptID, (promptName, _) in self.promptDict.items()}
+                self._updatePromptDict(promptID, promptName)
+        return self.promptDict
 
     def getPrompt(self, promptID):
-        promptName, prompt = self._getPromptNameAndPrompt(promptID)
+        promptName = self._getPromptName(promptID)
         # Load from file
         promptFilePath = self._getPromptFilePath(promptID, promptName)
         with open(promptFilePath, 'r', encoding = 'utf-8') as f:
@@ -68,39 +66,37 @@ class ChatManager:
             f.write('')
         # Init prompt
         promptID, promptName = self._getPromptIDAndPromptName(promptFilePath)
-        self._updatePromptDict(promptID, promptName, "")
+        self._updatePromptDict(promptID, promptName)
         return promptID, promptName
 
     def renamePrompt(self, promptID, newName):
-        oldName, prompt = self._getPromptNameAndPrompt(promptID)
+        oldName = self._getPromptName(promptID)
         oldPromptFilePath = self._getPromptFilePath(promptID, oldName)
         newPromptFilePath = self._getPromptFilePath(promptID, newName)
         # Rename file
         os.rename(oldPromptFilePath, newPromptFilePath)
         # Update prompt
-        self._updatePromptDict(promptID, newName, prompt)
+        self._updatePromptDict(promptID, newName)
 
     def deletePrompt(self, promptID):
-        promptName, _ = self._getPromptNameAndPrompt(promptID)
+        promptName = self._getPromptName(promptID)
         # Remove file
         os.remove(self._setFilePath(self.promptDir, promptID, promptName))
         # Remove prompt
         self.promptDict.pop(promptID)
 
     def savePrompt(self, promptID, prompt: str):
-        promptName, _ = self._getPromptNameAndPrompt(promptID)
+        promptName = self._getPromptName(promptID)
         promptFilePath = self._getPromptFilePath(promptID, promptName)
         # Save to file
         with open(promptFilePath, 'w', encoding = 'utf-8') as f:
             promptStr = prompt.strip()
             f.write(promptStr)
-        # Save to dict
-        self._updatePromptDict(promptID, promptName, prompt)
 
-    def _updateMessageDict(self, historyID, conversationName, messages):
-        self.messagesDict[historyID] = (conversationName, messages)
+    def _updateMessageDict(self, historyID, conversationName):
+        self.messagesDict[historyID] = conversationName
 
-    def _getConversationNameAndMessages(self, historyID):
+    def _getConversationName(self, historyID):
         return self.messagesDict[historyID]
 
     def _getHistoryFilePath(self, historyID, conversationName):
@@ -125,18 +121,16 @@ class ChatManager:
                     os.remove(conversationFilePath)
                     os.remove(questionFilePath) if Path(questionFilePath).exists() else None
                     continue
-                with open(conversationFilePath, 'r', encoding = 'utf-8') as f:
-                    messages = [json.loads(message) for message in f.readlines()]
                 historyID, conversationName = self._getHistoryIDAndConversationName(conversationFilePath)
-                self._updateMessageDict(historyID, conversationName, messages)
-        return {historyID: conversationName for historyID, (conversationName, _) in self.messagesDict.items()}
+                self._updateMessageDict(historyID, conversationName)
+        return self.messagesDict
 
     def getHistory(self, historyID):
-        conversationName, messages = self._getConversationNameAndMessages(historyID)
+        conversationName = self._getConversationName(historyID)
         # Load from file
         conversationFilePath, questionFilePath = self._getHistoryFilePath(historyID, conversationName)
         with open(conversationFilePath, 'r', encoding = 'utf-8') as f:
-            messages = [eval(message.strip()) for message in f.read().splitlines()]
+            messages = [eval(message.strip()) for message in f.read().splitlines()] #messages = [json.loads(message) for message in f.readlines()]
         with open(questionFilePath, 'r', encoding = 'utf-8') as f:
             question = f.read().strip()
         return messages, question
@@ -151,23 +145,23 @@ class ChatManager:
             f.write('')
         # Init message
         historyID, conversationName = self._getHistoryIDAndConversationName(conversationFilePath)
-        self._updateMessageDict(historyID, conversationName, [])
+        self._updateMessageDict(historyID, conversationName)
         #self.applyPrompt(promptID)
         return historyID, conversationName
 
     def renameConversation(self, historyID, newName):
-        oldName, messages = self._getConversationNameAndMessages(historyID)
+        oldName = self._getConversationName(historyID)
         oldConversationFilePath, oldQuestionFilePath = self._getHistoryFilePath(historyID, oldName)
         newConversationFilePath, newQuestionFilePath = self._getHistoryFilePath(historyID, newName)
         # Rename file
         os.rename(oldConversationFilePath, newConversationFilePath)
         os.rename(oldQuestionFilePath, newQuestionFilePath)
         # Transfer&Remove message
-        self._updateMessageDict(historyID, newName, messages)
+        self._updateMessageDict(historyID, newName)
         #self.applyPrompt(promptID)
 
     def deleteConversation(self, historyID):
-        conversationName, _ = self._getConversationNameAndMessages(historyID)
+        conversationName = self._getConversationName(historyID)
         conversationFilePath, questionFilePath = self._getHistoryFilePath(historyID, conversationName)
         # Remove file
         os.remove(conversationFilePath)
@@ -176,26 +170,25 @@ class ChatManager:
         self.messagesDict.pop(historyID)
 
     def saveConversation(self, historyID, messages: list):
-        conversationName, _ = self._getConversationNameAndMessages(historyID)
+        conversationName = self._getConversationName(historyID)
         conversationFilePath, _ = self._getHistoryFilePath(historyID, conversationName)
         # Save to file
         with open(conversationFilePath, 'w', encoding = 'utf-8') as f:
             conversationStr = '\n'.join(json.dumps(message, ensure_ascii = False) for message in messages)
             f.write(conversationStr)
-        # Save to dict
-        self._updateMessageDict(historyID, conversationName, messages)
 
     def saveQuestion(self, historyID, question: str):
-        conversationName, _ = self._getConversationNameAndMessages(historyID)
-        conversationFilePath, questionFilePath = self._getHistoryFilePath(historyID, conversationName)
+        conversationName = self._getConversationName(historyID)
+        _, questionFilePath = self._getHistoryFilePath(historyID, conversationName)
         # Save to file
         with open(questionFilePath, 'w', encoding = 'utf-8') as f:
             questionStr = question.strip()
             f.write(questionStr)
 
     def applyPrompt(self, promptID):
-        _, prompt = self._getPromptNameAndPrompt(promptID)
-        for historyID, (conversationName, messages) in self.messagesDict.copy().items():
+        prompt = self.getPrompt(promptID)
+        for historyID, _ in self.messagesDict.copy().items():
+            messages, _ = self.getHistory(historyID)
             for message in messages.copy():
                 messages.remove(message) if message['role'] == 'system' else None # Remove previous prompt if exists
             messages.append(
@@ -204,21 +197,23 @@ class ChatManager:
                     'content': prompt
                 }
             )
-            self._updateMessageDict(historyID, conversationName, messages)
+            # Save conversation
+            self.saveConversation(historyID, messages)
 
     def addUserMessage(self, historyID, userMessage: dict):
-        conversationName, messages = self._getConversationNameAndMessages(historyID)
+        messages, _ = self.getHistory(historyID)
         messages.append(userMessage)
-        self._updateMessageDict(historyID, conversationName, messages)
+        # Save conversation
+        self.saveConversation(historyID, messages)
 
     def recieveAnswer(self, historyID, recievedText):
-        conversationName, messages = self._getConversationNameAndMessages(historyID)
+        messages, _ = self.getHistory(historyID)
         if messages[-1]['role'] == 'assistant':
             messages[-1]['content'] += recievedText
         if messages[-1]['role'] == 'user':
             messages.append({'role': 'assistant', 'content': recievedText})
-        #self._updateMessageDict(historyID, conversationName, messages)
-        self.saveConversation(historyID, messages) # Save the current conversation
+        # Save conversation
+        self.saveConversation(historyID, messages)
         return messages
 
 ##############################################################################################################################

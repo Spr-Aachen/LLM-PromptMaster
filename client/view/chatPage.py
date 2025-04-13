@@ -42,11 +42,14 @@ class SubChatPage(SubPage):
         self.button_manageRole.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed))
         self.button_manageRole.setIcon(IconBase.Ellipsis)
         self.button_manageRole.setToolTip("管理角色")
+        self.checkbox_testMode = CheckBoxBase()
+        self.checkbox_testMode.setText('测试模式')
         layout_role = QHBoxLayout()
         layout_role.setSpacing(12)
         layout_role.addWidget(label_role)
         layout_role.addWidget(self.display_role)
         layout_role.addWidget(self.button_manageRole)
+        layout_role.addWidget(self.checkbox_testMode)
         page1Layout = QHBoxLayout(page1)
         page1Layout.setSpacing(21)
         page1Layout.setContentsMargins(0, 0, 0, 0)
@@ -194,8 +197,6 @@ class SubChatPage(SubPage):
         self.button_send.setText('发送')
         self.button_stop = HollowButton()
         self.button_stop.setText('停止')
-        self.button_test = HollowButton()
-        self.button_test.setText('测试')
         self.stackedWidgetPage_send = QWidget()
         stackedWidgetPage_send_layout = QGridLayout(self.stackedWidgetPage_send)
         stackedWidgetPage_send_layout.setHorizontalSpacing(12)
@@ -230,7 +231,7 @@ class SubChatPage(SubPage):
         rootItemText: Optional[str] = None, toolBoxText: Optional[str] = None, text: str = ...,
         listItemClickedEvent: object = ..., contextMenuActions: dict = ..., createConversationEvent: object = ...,
         inputEditTextChangedEvent: object = ..., inputEditKeyEnterPressedEvent: object = ... , inputEditPlaceholderText: str = ...,
-        sendEvent: object = ..., stopEvent: object = ..., testEvent: object = ...
+        sendEvent: object = ..., stopEvent: object = ...,
     ):
         self._addChatFrame(rootItemText, toolBoxText, text)
 
@@ -243,7 +244,6 @@ class SubChatPage(SubPage):
         self.inputEdit.setPlaceholderText(inputEditPlaceholderText)
         self.button_send.clicked.connect(sendEvent)
         self.button_stop.clicked.connect(stopEvent)
-        self.button_test.clicked.connect(testEvent)
 
     def blockInput(self, block: bool):
         self.comboBox_type.setDisabled(block)
@@ -253,7 +253,6 @@ class SubChatPage(SubPage):
         self.listWidget_history.setDisabled(block)
         self.button_createConversation.setDisabled(block)
         self.button_send.setDisabled(block)
-        self.button_test.setDisabled(block)
         self.inputEdit.blockKeyEnter(block)
 
 

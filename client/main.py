@@ -2,7 +2,6 @@
 
 import os
 import sys
-import shutil
 import argparse
 import PyEasyUtils as EasyUtils
 from datetime import date, datetime
@@ -121,7 +120,7 @@ class PromptWindow(Window_PromptWindow):
         # Get the current time as the name of prompt
         promptName = datetime.now().strftime("%Y%m%d%H%M%S") if name is None else name
         # 
-        promptID, promptName = simpleRequest(EasyUtils.requestManager.Post, args.host, args.port, 'createPrompt', f'name={promptName}')
+        promptID, promptName = simpleRequest(EasyUtils.requestManager.Post, args.host, args.port, 'createPrompt', f'name={EasyUtils.makeSafeForURL(promptName)}')
         # Set role item
         item = QStandardItem(promptName)
         self._setPromptID(item, promptID)
@@ -141,7 +140,7 @@ class PromptWindow(Window_PromptWindow):
             )
             if ok and newName:
                 promptID = self._getPromptID(item)
-                simpleRequest(EasyUtils.requestManager.Post, args.host, args.port, 'renamePrompt', f'promptID={promptID}&newName={newName}')
+                simpleRequest(EasyUtils.requestManager.Post, args.host, args.port, 'renamePrompt', f'promptID={promptID}&newName={EasyUtils.makeSafeForURL(newName)}')
                 item.setText(newName)
 
     def deleteCurrentPrompt(self):
@@ -166,7 +165,7 @@ class PromptWindow(Window_PromptWindow):
         promptID = self._getPromptID(self.currentRoleItem())
         if promptID is None:
             return
-        simpleRequest(EasyUtils.requestManager.Post, args.host, args.port, 'savePrompt', f'promptID={promptID}&prompt={prompt}')
+        simpleRequest(EasyUtils.requestManager.Post, args.host, args.port, 'savePrompt', f'promptID={promptID}&prompt={EasyUtils.makeSafeForURL(prompt)}')
 
     def initUI(self):
         self.titleArea.setText('Prompt Manager')
@@ -190,7 +189,13 @@ class PromptWindow(Window_PromptWindow):
 
 
 class MainWindow(Window_MainWindow):
-    workerManager = None
+    chatRequestWorker = None
+
+    chatRoleDict = {
+        'user': ChatRole.User,
+        'assistant': ChatRole.Contact,
+        'system': None
+    }
 
     def __init__(self):
         super().__init__()
@@ -257,9 +262,10 @@ class MainWindow(Window_MainWindow):
             cleanedMessages.append(cleanedMessage)
         self.subChatPage.messageBrowser.clear()
         for message in cleanedMessages:
+            chatRole = self.chatRoleDict[list(message.keys())[0]]
             self.subChatPage.messageBrowser.addMessage(
-                list(message.values())[0], ChatRole.User if list(message.keys())[0] == 'user' else ChatRole.Contact, None
-            )
+                list(message.values())[0], chatRole, None
+            ) if chatRole else None
 
     def loadHistory(self, item: QStandardItem):
         # 
@@ -275,7 +281,7 @@ class MainWindow(Window_MainWindow):
         # Get the current time as the name of conversation
         conversationName = datetime.now().strftime("%Y%m%d%H%M%S") if name is None else name
         # 
-        historyID, conversationName = simpleRequest(EasyUtils.requestManager.Post, args.host, args.port, 'createConversation', f'name={conversationName}')
+        historyID, conversationName = simpleRequest(EasyUtils.requestManager.Post, args.host, args.port, 'createConversation', f'name={EasyUtils.makeSafeForURL(conversationName)}')
         # Set conversation item
         item = QStandardItem(conversationName)
         self._setHistoryID(item, historyID)
@@ -295,7 +301,7 @@ class MainWindow(Window_MainWindow):
             )
             if ok and newName:
                 historyID = self._getHistoryID(item)
-                simpleRequest(EasyUtils.requestManager.Post, args.host, args.port, 'renameConversation', f'historyID={historyID}&newName={newName}')
+                simpleRequest(EasyUtils.requestManager.Post, args.host, args.port, 'renameConversation', f'historyID={historyID}&newName={EasyUtils.makeSafeForURL(newName)}')
                 item.setText(newName)
 
     def deleteConversation(self):
@@ -314,12 +320,12 @@ class MainWindow(Window_MainWindow):
                 if self.conversationNames().__len__() > 0:
                     self.subChatPage.listWidget_history.click(self.currentConversationItem())
                 else:
-                    self.subChatPage.inputEdit.clear()
+                    self.subChatPage.messageBrowser.clear()
 
     def saveQuestion(self, historyID, question: str):
         if self.currentConversationItem() is None:
             return
-        simpleRequest(EasyUtils.requestManager.Post, args.host, args.port, 'saveQuestion', f'historyID={historyID}&question={question}')
+        simpleRequest(EasyUtils.requestManager.Post, args.host, args.port, 'saveQuestion', f'historyID={historyID}&question={EasyUtils.makeSafeForURL(question)}')
 
     def applyPrompt(self):
         promptID = self.promptWindow.currentPromptID()
@@ -327,21 +333,22 @@ class MainWindow(Window_MainWindow):
             return
         simpleRequest(EasyUtils.requestManager.Post, args.host, args.port, 'applyPrompt', f'promptID={promptID}')
 
-    def _addMessage(self, currentRole: str, messages: Union[dict, list[dict]], status: Status = None):
+    def _addMessage(self, currentRole: str, messages: Union[dict, list[dict], None], status: Status = None):
         if status is not None:
             self.subChatPage.messageBrowser.addMessage(
                 '', ChatRole.Contact, status, False
             )
             return
         for message in reversed(messages if isinstance(messages, list) else [messages]):
+            if message is None:
+                continue
             role = str(message['role']).strip()
             content = str(message['content']).strip()
             if role != currentRole or len(content) == 0:
                 continue
-            content = EasyUtils.toMarkdown(content)
             self.subChatPage.messageBrowser.addMessage(
-                content,
-                role = ChatRole.Contact if currentRole == 'assistant' else ChatRole.User,
+                EasyUtils.toMarkdown(content),
+                role = self.chatRoleDict[currentRole],
                 status = status,
                 stream = True if currentRole == 'assistant' else False,
             )
@@ -352,8 +359,20 @@ class MainWindow(Window_MainWindow):
         # Update assistant message
         self._addMessage('assistant', messages) if self.currentConversationName() == conversationName else None
 
-    def sendMessage(self, testTimes: Optional[int] = None):
-        self.stopService()
+    def sendMessage(self):
+        totalTestTimes = None
+        if self.subChatPage.checkbox_testMode.isChecked():
+            totalTestTimes, ok = InputDialogBase.getText(self,
+                'Set Testing Times',
+                'Enter testing times:'
+            )
+            if ok and totalTestTimes.strip().__len__() > 0:
+                totalTestTimes = int(totalTestTimes.strip())
+                if totalTestTimes <= 0:
+                    MessageBoxBase.pop(self,
+                        QMessageBox.Warning, 'Warning',
+                        'Incorrect number!'
+                    )
         inputContent = self.subChatPage.inputEdit.toPlainText()
         if inputContent.strip().__len__() == 0:
             return
@@ -371,10 +390,11 @@ class MainWindow(Window_MainWindow):
         # Display new user message
         self._addMessage('user', newMessage)
         # Update user messages
-        simpleRequest(EasyUtils.requestManager.Post, args.host, args.port, 'addUserMessage', f'historyID={historyID}&userMessage={newMessage}')
+        simpleRequest(EasyUtils.requestManager.Post, args.host, args.port, 'addUserMessage', f'historyID={historyID}&userMessage={EasyUtils.makeSafeForURL(newMessage)}')
         # Start a new thread to send the request
-        self.workerManager = WorkerManager(
-            executeMethod = task_chatRequest.execute,
+        chatRequestTask = task_chatRequest()
+        self.chatRequestWorker = WorkerManager(
+            executeMethod = chatRequestTask.execute,
             executeParams = (
                 args.host, args.port,
                 historyID,
@@ -385,56 +405,28 @@ class MainWindow(Window_MainWindow):
                 self.subChatPage.lineEdit_assistantID.text(),
                 newMessage,
                 None,
-                testTimes
+                totalTestTimes
             ),
-            terminateMethod = task_chatRequest.terminate,
+            terminateMethod = chatRequestTask.terminate,
             threadPool = self.threadPool
         )
-        self.workerManager.executeClassInstance.textReceived.connect(
+        self.chatRequestWorker.executeClassInstance.textReceived.connect(
             lambda text: (
                 self.recieveAnswer(historyID, text, conversationName),
-                Function_AnimateStackedWidget(
-                    self.subChatPage.stackedWidget_sendAndStop,
-                    self.subChatPage.stackedWidgetPage_send
-                ),
                 self.subChatPage.blockInput(False)
             )
         )
-        self.workerManager.execute()
-        self._addMessage('', False, Status.Loading)
+        self.chatRequestWorker.execute()
+        self._addMessage('assistant', None, Status.Loading)
         self.subChatPage.inputEdit.clear()
         self.subChatPage.inputEdit.setFocus()
-        Function_AnimateStackedWidget(
-            self.subChatPage.stackedWidget_sendAndStop,
-            self.subChatPage.stackedWidgetPage_stop
-        )
-
-    def query(self):
-        self.sendMessage()
-
-    def queryTest(self):
-        totalTestTimes, ok = InputDialogBase.getText(self,
-            'Set Testing Times',
-            'Enter testing times:'
-        )
-        if ok and totalTestTimes.strip().__len__() > 0:
-            self.totalTestTimes = int(totalTestTimes.strip())
-            if self.totalTestTimes <= 0:
-                MessageBoxBase.pop(self,
-                    QMessageBox.Warning, 'Warning',
-                    'Incorrect number!'
-                )
-                return
-        else:
-            return
-        self.sendMessage(int(totalTestTimes))
 
     def exitService(self):
         exitService()
 
     def stopService(self):
-        if self.workerManager is not None:
-            self.workerManager.terminate()
+        if self.chatRequestWorker is not None:
+            self.chatRequestWorker.terminate()
 
     def main(self):
         # ParamsManager
@@ -541,13 +533,13 @@ class MainWindow(Window_MainWindow):
                 self.currentHistoryID(),
                 self.subChatPage.inputEdit.toPlainText()
             ) if self.currentConversationItem() is not None else None,
-            inputEditKeyEnterPressedEvent = self.query,
+            inputEditKeyEnterPressedEvent = self.sendMessage,
             inputEditPlaceholderText = """
             请在此区域输入您的问题，点击 Send 或按下 Ctrl+Enter 发送提问
             如果只返回了问题而没有答案，请等待几秒或者换一个模型试试
             """,
             #loadQuestionsEvent = self.loadQuestions,
-            sendEvent = self.query,
+            sendEvent = self.sendMessage,
             stopEvent = lambda: (
                 self.stopService,
                 Function_AnimateStackedWidget(
@@ -555,7 +547,6 @@ class MainWindow(Window_MainWindow):
                     self.subChatPage.stackedWidgetPage_send
                 )
             ),
-            testEvent = self.queryTest,
         )
 
         self.ui.Page_Chat.addSubPage(

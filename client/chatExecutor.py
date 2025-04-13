@@ -65,9 +65,9 @@ def chatRequest(
 
     # Post message
     if type == 'gpt':
-        query = f"historyID={historyID}&source={sourceName}{f'&env={env}' if env is not None else ''}&model={'gpt-4o' if model is None else model}{f'&testtimes={testTimes}' if testTimes is not None else ''}"
+        query = f"historyID={historyID}&source={sourceName}{f'&env={env}' if env is not None else ''}&model={'gpt-4o' if model is None else model}{f'&testTimes={testTimes}' if testTimes is not None else ''}"
     if type == 'assistant':
-        query = f"historyID={historyID}&source={sourceName}{f'&env={env}' if env is not None else ''}&code={'114514' if code is None else code}{f'&testtimes={testTimes}' if testTimes is not None else ''}"
+        query = f"historyID={historyID}&source={sourceName}{f'&env={env}' if env is not None else ''}&code={'114514' if code is None else code}{f'&testTimes={testTimes}' if testTimes is not None else ''}"
     URL = f"http://{host}:{port}/{type}{f'?{query}' if len(query) > 0 else ''}"
     Headers = {
         'Authorization': oAuth_token
@@ -111,9 +111,9 @@ class task_chatRequest(QObject):
         code: Optional[str] = None,
         message: list[dict] = [{}],
         options: Optional[dict] = None,
-        testtimes: Optional[int] = None
+        testTimes: Optional[int] = None
     ):
-        for result, statuscode in chatRequest(host, port, historyID, sourceName, env, type, model, code, message, options, testtimes):
+        for result, statuscode in chatRequest(host, port, historyID, sourceName, env, type, model, code, message, options, testTimes):
             self.textReceived.emit(result)
             time.sleep(0.03)
             if self.terminateFlag:
