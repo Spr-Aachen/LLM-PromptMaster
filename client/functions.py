@@ -373,7 +373,7 @@ def Function_SetMethodExecutor(
         executeButton.clicked.connect(workerManager.execute)
     else:
         tempButton = QPushButton(parentWindow)
-        tempButton.clicked.connect(workerManager.terminate)
+        tempButton.clicked.connect(workerManager.execute)
         tempButton.setVisible(False)
         tempButton.click()
         workerManager.signals.finished.connect(tempButton.deleteLater)
@@ -391,5 +391,23 @@ def Function_SetMethodExecutor(
         )
     else:
         pass
+
+##############################################################################################################################
+
+def simpleRequest(
+    reqMethod: EasyUtils.requestManager, host, port,
+    pathParams: Union[str, list[str], None] = None,
+    queryParams: Union[str, list[str], None] = None,
+    *keys
+):
+    #return EasyUtils.simpleRequest(reqMethod, "http", host, port, pathParams, queryParams, *keys)
+
+    if not EasyUtils.isConnected("http", host, port):
+        return
+    response = reqMethod.request("http", host, port, pathParams, queryParams, *keys)
+    for parsed_content, _ in EasyUtils.responseParser(response):
+        encodedResponse = parsed_content
+    result = (encodedResponse.get(key, {}) for key in keys) if keys else encodedResponse
+    return result
 
 ##############################################################################################################################

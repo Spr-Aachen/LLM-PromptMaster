@@ -17,7 +17,7 @@ modelsInfo = {
     SourceName.azure: list(request_azure.chatURLs.keys()),
     SourceName.deepseek: list(request_deepseek.chatURLs.keys()),
     SourceName.openai: list(request_openai.chatURLs.keys()),
-    SourceName.transsion: list(request_transsion.ChatURLs.keys())
+    SourceName.transsion: list(request_transsion.chatURLs.keys())
 }
 
 

@@ -1,30 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import json
-import json_repair
 import time
 import requests
 import PyEasyUtils as EasyUtils
 from typing import Union, Optional
-from PySide6.QtCore import QObject, Signal
-
-##############################################################################################################################
-
-def simpleRequest(
-    reqMethod: EasyUtils.requestManager, host, port,
-    pathParams: Union[str, list[str], None] = None,
-    queryParams: Union[str, list[str], None] = None,
-    *keys
-):
-    #return EasyUtils.simpleRequest(reqMethod, "http", host, port, pathParams, queryParams, *keys)
-
-    if not EasyUtils.isConnected("http", host, port):
-        return
-    response = reqMethod.request("http", host, port, pathParams, queryParams, *keys)
-    for parsed_content, _ in EasyUtils.responseParser(response):
-        encodedResponse = parsed_content
-    result = (encodedResponse.get(key, {}) for key in keys) if keys else encodedResponse
-    return result
 
 ##############################################################################################################################
 
@@ -38,6 +18,7 @@ def chatRequest(
     code: Optional[str] = None,
     message: list[dict] = [{}],
     options: Optional[dict] = None,
+    apiKey: Optional[str] = None,
     testTimes: Optional[int] = None,
     stream: bool = True
 ):
@@ -65,9 +46,9 @@ def chatRequest(
 
     # Post message
     if type == 'gpt':
-        query = f"historyID={historyID}&source={sourceName}{f'&env={env}' if env is not None else ''}&model={'gpt-4o' if model is None else model}{f'&testTimes={testTimes}' if testTimes is not None else ''}"
+        query = f"historyID={historyID}&source={sourceName}&env={env}&model={model}&apiKey={apiKey}&testTimes={testTimes}"
     if type == 'assistant':
-        query = f"historyID={historyID}&source={sourceName}{f'&env={env}' if env is not None else ''}&code={'114514' if code is None else code}{f'&testTimes={testTimes}' if testTimes is not None else ''}"
+        query = f"historyID={historyID}&source={sourceName}&env={env}&code={code}&apiKey={apiKey}&testTimes={testTimes}"
     URL = f"http://{host}:{port}/{type}{f'?{query}' if len(query) > 0 else ''}"
     Headers = {
         'Authorization': oAuth_token
@@ -93,9 +74,9 @@ def chatRequest(
             return
 
 
-class task_chatRequest(QObject):
-    textReceived = Signal(str)
-
+class task_chatRequest:
+    """
+    """
     def __init__(self):
         super().__init__()
 
@@ -111,10 +92,13 @@ class task_chatRequest(QObject):
         code: Optional[str] = None,
         message: list[dict] = [{}],
         options: Optional[dict] = None,
+        apiKey: Optional[str] = None,
         testTimes: Optional[int] = None
     ):
-        for result, statuscode in chatRequest(host, port, historyID, sourceName, env, type, model, code, message, options, testTimes):
-            self.textReceived.emit(result)
+        def _clean(strVar):
+            return (None if strVar.strip() == "" else strVar.strip()) if isinstance(strVar, str) else None
+        for result, statuscode in chatRequest(host, port, historyID, sourceName, _clean(env), type, _clean(model), _clean(code), message, options, _clean(apiKey), testTimes):
+            yield result
             time.sleep(0.03)
             if self.terminateFlag:
                 break

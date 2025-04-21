@@ -6,7 +6,7 @@ from typing import Optional, Union
 
 ##############################################################################################################################
 
-ChatURLs_Norm = {
+chatURLs_Norm = {
     'gpt-35-turbo': "api/azure/openai/chatCompletion?deploymentId=gpt-35-turbo",
     'gpt-4o': "api/azure/openai/chatCompletion?deploymentId=gpt-4o",
     'gemini-1.5-pro-001': "api/azure/openai/chatCompletion?deploymentId=gemini-1.5-pro-001",
@@ -14,12 +14,12 @@ ChatURLs_Norm = {
     'claude-3-5-sonnet@20240620': "api/azure/openai/chatCompletion?deploymentId=claude-3-5-sonnet@20240620",
 }
 
-ChatURLs_Paint = {
+chatURLs_Paint = {
     'dall-e2': "api/azure/openai/generationImage",
     'dall-e3': "api/azure/openai/generateDell3Image?deploymentId=Dalle3",
 }
 
-ChatURLs = {**ChatURLs_Norm, **ChatURLs_Paint}
+chatURLs = {**chatURLs_Norm, **chatURLs_Paint}
 
 
 def gptRequest(
@@ -27,7 +27,7 @@ def gptRequest(
     gptGateway: str = ...,
     appID: Optional[str] = None,
     appSecret: str = ...,
-    model: str = ...,
+    model: Optional[str] = None,
     messages: list = [{}],
     options: Optional[dict] = None,
     stream: bool = True,
@@ -50,16 +50,17 @@ def gptRequest(
     else:
         yield "Request failed", response.status_code
     # 请求GPT接口
-    url = f"{gptGateway}/{ChatURLs[model]}"
+    model = model or list(chatURLs.keys())[0]
+    url = f"{gptGateway}/{chatURLs[model]}"
     Headers = {
         'Content-Type': 'application/json',
         'Authorization': oAuth_token
     }
-    if model in ChatURLs_Norm:
+    if model in chatURLs_Norm:
         Payload = {
             'messages': messages,
         }
-    if model in ChatURLs_Paint:
+    if model in chatURLs_Paint:
         Payload = {
             'prompt': f"{messages[0]['content']}\n{messages[1]['content']}",
         }
@@ -87,9 +88,9 @@ def gptRequest(
                     try:
                         parsed_content = json_repair.loads(buffer)
                         #print('buffer successfully parsed:\n', buffer)
-                        if model in ChatURLs_Norm:
+                        if model in chatURLs_Norm:
                             result = parsed_content['choices'][0]['delta']['content'] if stream else parsed_content['data']['choices'][0]['message']['content']
-                        if model in ChatURLs_Paint:
+                        if model in chatURLs_Paint:
                             result = parsed_content['data']['data'][0]['url']
                         yield result, response.status_code
                     except:

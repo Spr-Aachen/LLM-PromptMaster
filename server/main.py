@@ -4,6 +4,7 @@ import os
 import psutil
 import signal
 import argparse
+import PyEasyUtils as EasyUtils
 import uvicorn
 from fastapi import FastAPI, Request, Response, status, UploadFile, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,7 +19,23 @@ from utils import TokenParam, checkToken, write_file, modelsInfo
 from gpt import GPTClient
 from assistant import AssistantClient
 from wrapper import ChatManager
-from config import currentDir
+
+##############################################################################################################################
+
+# Get current path
+currentPath = EasyUtils.getCurrentPath()
+
+# Get current directory
+currentDir = Path(currentPath).parent.as_posix()
+
+# Set directory to load static dependencies
+resourceDir = EasyUtils.getBaseDir(searchMEIPASS = True) or currentDir
+
+# Check whether python file is compiled
+_, isFileCompiled = EasyUtils.getFileInfo()
+
+# Get current version (assume resourceDir is the name of current version after being compiled)
+currentVersion = Path(resourceDir).name if isFileCompiled else 'beta version'
 
 ##############################################################################################################################
 
@@ -217,30 +234,30 @@ class PromptTestTool:
             return messages
 
         @self._app.post("/gpt")
-        async def gpt(request: Request, historyID: str, source: str, env: Optional[str] = None, model: str = "gpt-4o", testtimes: Optional[int] = None):
+        async def gpt(request: Request, historyID: str, source: str, env: Optional[str] = None, model: Optional[str] = None, apiKey: Optional[str] = None, testTimes: Optional[Union[int, str]] = None):
             reqJs: dict = await request.json()
             message = reqJs.get('message', None)
             options = reqJs.get('options', None)
             messages = self.chatManager.getHistory(historyID)[0] + [message]
             promptDir = Path(currentDir).joinpath("prompt").as_posix()
-            configPath = Path(currentDir).joinpath("config", source, f"config-{env.strip()}.ini" if env is not None else "config.ini").as_posix()
-            gptClient = GPTClient(source, configPath, promptDir)
-            contentStream = gptClient.run(model, messages, options) if testtimes is None else gptClient.test(model, messages, options, testtimes)
+            configPath = Path(currentDir).joinpath("config", source, f"config-{env.strip()}.ini" if EasyUtils.evalString(env) is not None else "config.ini").as_posix()
+            gptClient = GPTClient(source, EasyUtils.evalString(apiKey), configPath, promptDir)
+            contentStream = gptClient.run(EasyUtils.evalString(model), messages, options) if EasyUtils.evalString(testTimes) is None else gptClient.test(EasyUtils.evalString(model), messages, options, testTimes)
             return StreamingResponse(
                 content = contentStream,
                 media_type = "application/json"
             )
 
         @self._app.post("/assistant")
-        async def assistant(request: Request, historyID: str, source: str, env: Optional[str] = None, code: Optional[str] = None, testtimes: Optional[int] = None):
+        async def assistant(request: Request, historyID: str, source: str, env: Optional[str] = None, code: Optional[str] = None, apiKey: Optional[str] = None, testTimes: Optional[Union[int, str]] = None):
             reqJs: dict = await request.json()
             message = reqJs.get('message', None)
             options = reqJs.get('options', None)
             messages = self.chatManager.getHistory(historyID)[0] + [message]
             promptDir = Path(currentDir).joinpath("prompt").as_posix()
-            configPath = Path(currentDir).joinpath("config", source, f"config-{env.strip()}.ini" if env is not None else "config.ini").as_posix()
-            assistantClient = AssistantClient(source, configPath, promptDir)
-            contentStream = assistantClient.run(code, messages, options) if testtimes is None else assistantClient.test(code, messages, options, testtimes)
+            configPath = Path(currentDir).joinpath("config", source, f"config-{env.strip()}.ini" if EasyUtils.evalString(env) is not None else "config.ini").as_posix()
+            assistantClient = AssistantClient(source, EasyUtils.evalString(apiKey), configPath, promptDir)
+            contentStream = assistantClient.run(EasyUtils.evalString(code), messages, options) if EasyUtils.evalString(testTimes) is None else assistantClient.test(EasyUtils.evalString(code), messages, options, testTimes)
             return StreamingResponse(
                 content = contentStream,
                 media_type = "application/json"

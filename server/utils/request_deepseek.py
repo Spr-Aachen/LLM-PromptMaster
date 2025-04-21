@@ -19,7 +19,7 @@ chatURLs = {**chatURLs_Norm, **chatURLs_Paint}
 def gptRequest(
     gateway: str = ...,
     apiKey: Optional[str] = None,
-    model: str = ...,
+    model: Optional[str] = None,
     messages: list = [{}],
     options: Optional[dict] = None,
     stream: bool = True,
@@ -33,6 +33,7 @@ def gptRequest(
     # 获取令牌
     oAuth_token = f"Bearer {apiKey}"
     # 请求GPT接口
+    model = model or list(chatURLs.keys())[0]
     url = f"{gateway}/{chatURLs[model]}"
     Headers = {
         'Content-Type': 'application/json',

@@ -18,14 +18,14 @@ class GPTClient(object):
     """
     This class is used to interact with the GPT API
     """
-    def __init__(self, sourceName, configPath, promptDir):
+    def __init__(self, sourceName, apiKey, configPath, promptDir):
         self.sourceName = sourceName
 
         cf = configManager(configPath)
         self.gateway = cf.getValue("Auth", "gateway", None)
         self.pfGateway = cf.getValue("Auth", "pfGateway", None)
         self.gptGateway = cf.getValue("Auth", "gptGateway", None)
-        self.apiKey = cf.getValue("Auth", "apiKey", None)
+        self.apiKey = apiKey or cf.getValue("Auth", "apiKey", None)
         self.appID = cf.getValue("Auth", "appID", None)
         self.appSecret = cf.getValue("Auth", "appSecret", None)
         self.promptPath = Path(promptDir).joinpath(cf.getValue("Chat-GPT", "promptFile")).as_posix()
@@ -45,7 +45,7 @@ class GPTClient(object):
 
     def request(self,
         sourceName: SourceName,
-        model: str = ...,
+        model: Optional[str] = None,
         messages: list = [{}],
         options: Optional[dict] = None,
         stream: bool = True,
@@ -62,7 +62,7 @@ class GPTClient(object):
 
     def promptTest(self,
         sourceName: SourceName,
-        model: str = ...,
+        model: Optional[str] = None,
         messages: list = [{}],
         options: Optional[dict] = None,
         stream: bool = True,
@@ -158,7 +158,7 @@ class GPTClient(object):
             yield result, 200
 
     async def run(self,
-        model: str = ...,
+        model: Optional[str] = None,
         messages: Union[str, list] = ...,
         options: Optional[dict] = None
     ):
@@ -190,7 +190,7 @@ class GPTClient(object):
             )
 
     async def test(self,
-        model: str = ...,
+        model: Optional[str] = None,
         messages: Union[str, list] = ...,
         options: Optional[dict] = None,
         testTimes: Optional[int] = None

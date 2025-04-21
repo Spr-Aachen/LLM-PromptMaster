@@ -20,7 +20,17 @@ from functions import *
 from windows import *
 from view import *
 from chatExecutor import *
-from config import currentDir
+
+##############################################################################################################################
+
+# Get current path
+currentPath = EasyUtils.getCurrentPath()
+
+# Get current directory
+currentDir = Path(currentPath).parent.as_posix()
+
+# Check whether python file is compiled
+_, isFileCompiled = EasyUtils.getFileInfo()
 
 ##############################################################################################################################
 
@@ -405,12 +415,13 @@ class MainWindow(Window_MainWindow):
                 self.subChatPage.lineEdit_assistantID.text(),
                 newMessage,
                 None,
+                None,
                 totalTestTimes
             ),
             terminateMethod = chatRequestTask.terminate,
             threadPool = self.threadPool
         )
-        self.chatRequestWorker.executeClassInstance.textReceived.connect(
+        self.chatRequestWorker.signals.result.connect(
             lambda text: (
                 self.recieveAnswer(historyID, text, conversationName),
                 self.subChatPage.blockInput(False)

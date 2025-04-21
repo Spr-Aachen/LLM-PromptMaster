@@ -18,14 +18,14 @@ class AssistantClient(object):
     """
     This class is used to interact with the assistant API
     """
-    def __init__(self, sourceName, configPath, promptDir):
+    def __init__(self, sourceName, apiKey, configPath, promptDir):
         self.sourceName = sourceName
 
         cf = configManager(configPath)
         self.gateway = cf.getValue("Auth", "gateway", None)
         self.pfGateway = cf.getValue("Auth", "pfGateway", None)
         self.gptGateway = cf.getValue("Auth", "gptGateway", None)
-        self.apiKey = cf.getValue("Auth", "apiKey", None)
+        self.apiKey = apiKey or cf.getValue("Auth", "apiKey", None)
         self.appID = cf.getValue("Auth", "appID", None)
         self.appSecret = cf.getValue("Auth", "appSecret", None)
         self.xHeaderTenant = cf.getValue("Chat-Assistant", "xHeaderTenant", None)
