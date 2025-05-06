@@ -22,9 +22,6 @@ def chatRequest(
     testTimes: Optional[int] = None,
     stream: bool = True
 ):
-    if not EasyUtils.isConnected("http", host, port):
-        return
-
     # Get token
     Headers = {
         'P-Rtoken': "...",

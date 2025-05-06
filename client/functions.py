@@ -402,8 +402,6 @@ def simpleRequest(
 ):
     #return EasyUtils.simpleRequest(reqMethod, "http", host, port, pathParams, queryParams, *keys)
 
-    if not EasyUtils.isConnected("http", host, port):
-        return
     response = reqMethod.request("http", host, port, pathParams, queryParams, *keys)
     for parsed_content, _ in EasyUtils.responseParser(response):
         encodedResponse = parsed_content
