@@ -1,3 +1,4 @@
 [submodule "server"]
 	path = server
 	url = https://github.com/Spr-Aachen/LLM-PromptMaster-Backend.git
+	ignore = dirty
