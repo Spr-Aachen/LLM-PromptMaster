@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import json
+import json_repair
 import time
 import requests
 import PyEasyUtils as EasyUtils
@@ -23,14 +24,14 @@ def chatRequest(
     stream: bool = True
 ):
     # Get token
-    Headers = {
+    headers = {
         'P-Rtoken': "...",
         'P-Auth': "...",
         "P-AppId": "..."
     }
     response = requests.get(
         url = f"http://{host}:{port}/auth",
-        headers = Headers
+        headers = headers
     )
     if response.status_code == 200:
         res_token = response.json()
@@ -46,26 +47,27 @@ def chatRequest(
         query = f"historyID={historyID}&source={sourceName}&env={env}&model={model}&apiKey={apiKey}&testTimes={testTimes}"
     if type == 'assistant':
         query = f"historyID={historyID}&source={sourceName}&env={env}&code={code}&apiKey={apiKey}&testTimes={testTimes}"
-    URL = f"http://{host}:{port}/{type}{f'?{query}' if len(query) > 0 else ''}"
-    Headers = {
+    url = f"http://{host}:{port}/{type}{f'?{query}' if len(query) > 0 else ''}"
+    headers = {
         'Authorization': oAuth_token
     }
-    Payload = {
+    payload = {
         'message': message,
         'options': options
     } if options is not None else {
         'message': message
     }
     with requests.post(
-        url = URL,
-        headers = Headers,
-        data = json.dumps(Payload),
+        url = url,
+        headers = headers,
+        data = json.dumps(payload),
         stream = stream
     ) as response:
         if response.status_code == 200:
-            for parsed_content, status_code in EasyUtils.responseParser(response, stream = True):
-                result = parsed_content['data']
-                yield result, status_code
+            for content, statusCode in EasyUtils.responseParser(response, stream = stream):
+                repairedContent = json_repair.loads(content)
+                result = repairedContent['data']
+                yield result, statusCode
         else:
             yield "Request failed", response.status_code
             return
