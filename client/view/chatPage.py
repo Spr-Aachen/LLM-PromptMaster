@@ -43,6 +43,7 @@ class SubChatPage(SubPage):
         self.button_manageRole.setIcon(IconBase.Ellipsis)
         self.button_manageRole.setToolTip("管理角色")
         self.checkbox_testMode = CheckBoxBase()
+        self.checkbox_testMode.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed))
         self.checkbox_testMode.setText('测试模式')
         layout_role = QHBoxLayout()
         layout_role.setSpacing(12)

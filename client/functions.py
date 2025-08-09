@@ -82,6 +82,35 @@ def Function_AnimateStackedWidget(
     )
     WidgetAnimation.start() if stackedWidget.currentIndex() != TargetIndex else None
 
+
+def Function_AnimateFrame(
+    frame: QWidget,
+    minWidth: Optional[int] = None,
+    maxWidth: Optional[int] = None,
+    minHeight: Optional[int] = None,
+    maxHeight: Optional[int] = None,
+    duration: int = 210,
+    mode: str = "Toggle",
+    supportSplitter: bool = False
+):
+    '''
+    Function to animate frame
+    '''
+    def ExtendFrame():
+        QFunc.setWidgetSizeAnimation(frame, maxWidth, None, duration, supportSplitter).start() if maxWidth not in (None, frame.width()) else None
+        QFunc.setWidgetSizeAnimation(frame, None, maxHeight, duration, supportSplitter).start() if maxHeight not in (None, frame.height()) else None
+
+    def ReduceFrame():
+        QFunc.setWidgetSizeAnimation(frame, minWidth, None, duration, supportSplitter).start() if minWidth not in (None, frame.width()) else None
+        QFunc.setWidgetSizeAnimation(frame, None, minHeight, duration, supportSplitter).start() if minHeight not in (None, frame.height()) else None
+
+    if mode == "Extend":
+        ExtendFrame()
+    if mode == "Reduce":
+        ReduceFrame()
+    if mode == "Toggle":
+        ExtendFrame() if frame.width() == minWidth or frame.height() == minHeight else ReduceFrame()
+
 ##############################################################################################################################
 
 def Function_SetWidgetValue(
@@ -135,6 +164,14 @@ def Function_SetWidgetValue(
             config.editConfig(section, option, str(value))
         if config is not None:
             widget.toggled.connect(EditConfig)
+            EditConfig(value)
+
+    if isinstance(widget, (Table_APIKeys)):
+        widget.setValue(eval(str(value)))
+        def EditConfig(value):
+            config.editConfig(section, option, str(value))
+        if config is not None:
+            widget.valueChanged.connect(EditConfig)
             EditConfig(value)
 
 
@@ -391,21 +428,5 @@ def Function_SetMethodExecutor(
         )
     else:
         pass
-
-##############################################################################################################################
-
-def simpleRequest(
-    reqMethod: EasyUtils.requestManager, host, port,
-    pathParams: Union[str, list[str], None] = None,
-    queryParams: Union[str, list[str], None] = None,
-    *keys
-):
-    #return EasyUtils.simpleRequest(reqMethod, "http", host, port, pathParams, queryParams, *keys)
-
-    response = reqMethod.request("http", host, port, pathParams, queryParams, *keys)
-    for parsed_content, _ in EasyUtils.responseParser(response):
-        encodedResponse = parsed_content
-    result = (encodedResponse.get(key, {}) for key in keys) if keys else encodedResponse
-    return result
 
 ##############################################################################################################################

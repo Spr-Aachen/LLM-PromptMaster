@@ -1,1 +1,1 @@
-from .componenets import *
+from .tables import *
