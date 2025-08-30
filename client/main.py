@@ -112,7 +112,7 @@ class PromptWindow(Window_PromptWindow):
     def loadPrompts(self):
         # Initialize roles and add prompt to listwidget
         self.listWidget.clear()
-        for promptID, promptName in EasyUtils.simpleRequest(EasyUtils.requestManager.Get, "http", args.host, args.port, 'loadPrompts', None).items():
+        for promptID, promptName in EasyUtils.simpleRequest(EasyUtils.requestManager.Get, "http", args.host, args.port, 'chat/loadPrompts', None).items():
             item = QStandardItem()
             self._setPromptID(item, promptID)
             item.setText(promptName)
@@ -121,7 +121,7 @@ class PromptWindow(Window_PromptWindow):
     def loadPrompt(self, item: QStandardItem):
         # Load prompt
         promptID = self._getPromptID(item)
-        prompt = EasyUtils.simpleRequest(EasyUtils.requestManager.Get, "http", args.host, args.port, 'getPrompt', f'promptID={promptID}')
+        prompt = EasyUtils.simpleRequest(EasyUtils.requestManager.Get, "http", args.host, args.port, 'chat/getPrompt', f'promptID={promptID}')
         # Set prompt
         self.textEdit.setText(prompt)
 
@@ -129,7 +129,7 @@ class PromptWindow(Window_PromptWindow):
         # Get the current time as the name of prompt
         promptName = datetime.now().strftime("%Y%m%d%H%M%S") if name is None else name
         # 
-        promptID, promptName = EasyUtils.simpleRequest(EasyUtils.requestManager.Post, "http", args.host, args.port, 'createPrompt', f'name={EasyUtils.makeSafeForURL(promptName)}')
+        promptID, promptName = EasyUtils.simpleRequest(EasyUtils.requestManager.Post, "http", args.host, args.port, 'chat/createPrompt', f'name={EasyUtils.makeSafeForURL(promptName)}')
         # Set role item
         item = QStandardItem(promptName)
         self._setPromptID(item, promptID)
@@ -149,7 +149,7 @@ class PromptWindow(Window_PromptWindow):
             )
             if ok and newName:
                 promptID = self._getPromptID(item)
-                EasyUtils.simpleRequest(EasyUtils.requestManager.Post, "http", args.host, args.port, 'renamePrompt', f'promptID={promptID}&newName={EasyUtils.makeSafeForURL(newName)}')
+                EasyUtils.simpleRequest(EasyUtils.requestManager.Post, "http", args.host, args.port, 'chat/renamePrompt', f'promptID={promptID}&newName={EasyUtils.makeSafeForURL(newName)}')
                 item.setText(newName)
 
     def deleteCurrentPrompt(self):
@@ -162,7 +162,7 @@ class PromptWindow(Window_PromptWindow):
             )
             if confirm == QMessageBox.Yes:
                 promptID = self._getPromptID(item)
-                EasyUtils.simpleRequest(EasyUtils.requestManager.Post, "http", args.host, args.port, 'deletePrompt', f'promptID={promptID}')
+                EasyUtils.simpleRequest(EasyUtils.requestManager.Post, "http", args.host, args.port, 'chat/deletePrompt', f'promptID={promptID}')
                 self.listWidget.takeItem(self.listWidget.row(item))
                 # 
                 if self.roles().__len__() > 0:
@@ -174,7 +174,7 @@ class PromptWindow(Window_PromptWindow):
         promptID = self._getPromptID(self.currentRoleItem())
         if promptID is None:
             return
-        EasyUtils.simpleRequest(EasyUtils.requestManager.Post, "http", args.host, args.port, 'savePrompt', f'promptID={promptID}&prompt={EasyUtils.makeSafeForURL(prompt)}')
+        EasyUtils.simpleRequest(EasyUtils.requestManager.Post, "http", args.host, args.port, 'chat/savePrompt', f'promptID={promptID}&prompt={EasyUtils.makeSafeForURL(prompt)}')
 
     def initUI(self):
         self.titleArea.setText('Prompt Manager')
@@ -252,7 +252,7 @@ class MainWindow(Window_MainWindow):
     def loadHistories(self):
         # Initialize messagesDict and add conversations&questions to listwidget
         self.subChatPage.listWidget_history.clear()
-        for historyID, conversationName in EasyUtils.simpleRequest(EasyUtils.requestManager.Get, "http", args.host, args.port, 'loadHistories', None).items():
+        for historyID, conversationName in EasyUtils.simpleRequest(EasyUtils.requestManager.Get, "http", args.host, args.port, 'chat/loadHistories', None).items():
             item = QStandardItem()
             self._setHistoryID(item, historyID)
             item.setText(conversationName)
@@ -279,7 +279,7 @@ class MainWindow(Window_MainWindow):
     def loadHistory(self, item: QStandardItem):
         # Load conversation and question
         historyID = self._getHistoryID(item)
-        messages, question = EasyUtils.simpleRequest(EasyUtils.requestManager.Get, "http", args.host, args.port, 'getHistory', f'historyID={historyID}')
+        messages, question = EasyUtils.simpleRequest(EasyUtils.requestManager.Get, "http", args.host, args.port, 'chat/getHistory', f'historyID={historyID}')
         # Set messages
         self._setMessages(messages)
         # Set qustion
@@ -289,7 +289,7 @@ class MainWindow(Window_MainWindow):
         # Get the current time as the name of conversation
         conversationName = datetime.now().strftime("%Y%m%d%H%M%S") if name is None else name
         # 
-        historyID, conversationName = EasyUtils.simpleRequest(EasyUtils.requestManager.Post, "http", args.host, args.port, 'createConversation', f'name={EasyUtils.makeSafeForURL(conversationName)}')
+        historyID, conversationName = EasyUtils.simpleRequest(EasyUtils.requestManager.Post, "http", args.host, args.port, 'chat/createConversation', f'name={EasyUtils.makeSafeForURL(conversationName)}')
         # Set conversation item
         item = QStandardItem(conversationName)
         self._setHistoryID(item, historyID)
@@ -309,7 +309,7 @@ class MainWindow(Window_MainWindow):
             )
             if ok and newName:
                 historyID = self._getHistoryID(item)
-                EasyUtils.simpleRequest(EasyUtils.requestManager.Post, "http", args.host, args.port, 'renameConversation', f'historyID={historyID}&newName={EasyUtils.makeSafeForURL(newName)}')
+                EasyUtils.simpleRequest(EasyUtils.requestManager.Post, "http", args.host, args.port, 'chat/renameConversation', f'historyID={historyID}&newName={EasyUtils.makeSafeForURL(newName)}')
                 item.setText(newName)
 
     def deleteConversation(self):
@@ -322,7 +322,7 @@ class MainWindow(Window_MainWindow):
             )
             if confirm == QMessageBox.Yes:
                 historyID = self._getHistoryID(item)
-                EasyUtils.simpleRequest(EasyUtils.requestManager.Post, "http", args.host, args.port, 'deleteConversation', f'historyID={historyID}')
+                EasyUtils.simpleRequest(EasyUtils.requestManager.Post, "http", args.host, args.port, 'chat/deleteConversation', f'historyID={historyID}')
                 self.subChatPage.listWidget_history.takeItem(self.subChatPage.listWidget_history.row(item))
                 # 
                 if self.conversationNames().__len__() > 0:
@@ -333,13 +333,13 @@ class MainWindow(Window_MainWindow):
     def saveQuestion(self, historyID, question: str):
         if self.currentConversationItem() is None:
             return
-        EasyUtils.simpleRequest(EasyUtils.requestManager.Post, "http", args.host, args.port, 'saveQuestion', f'historyID={historyID}&question={EasyUtils.makeSafeForURL(question)}')
+        EasyUtils.simpleRequest(EasyUtils.requestManager.Post, "http", args.host, args.port, 'chat/saveQuestion', f'historyID={historyID}&question={EasyUtils.makeSafeForURL(question)}')
 
     def applyPrompt(self):
         promptID = self.promptWindow.currentPromptID()
         if promptID is None:
             return
-        EasyUtils.simpleRequest(EasyUtils.requestManager.Post, "http", args.host, args.port, 'applyPrompt', f'promptID={promptID}')
+        EasyUtils.simpleRequest(EasyUtils.requestManager.Post, "http", args.host, args.port, 'chat/applyPrompt', f'promptID={promptID}')
 
     def _addMessage(self, currentRole: str, messages: Union[dict, list[dict], None], status: Status = None):
         if status is not None:
@@ -363,7 +363,7 @@ class MainWindow(Window_MainWindow):
             break
 
     def recieveAnswer(self, historyID, recievedText, conversationName):
-        messages = EasyUtils.simpleRequest(EasyUtils.requestManager.Post, "http", args.host, args.port, 'recieveAnswer', f'historyID={historyID}&recievedText={recievedText}')
+        messages = EasyUtils.simpleRequest(EasyUtils.requestManager.Post, "http", args.host, args.port, 'chat/recieveAnswer', f'historyID={historyID}&recievedText={recievedText}')
         # Update assistant message
         self._addMessage('assistant', messages) if self.currentConversationName() == conversationName else None
 
@@ -398,7 +398,7 @@ class MainWindow(Window_MainWindow):
         # Display new user message
         self._addMessage('user', newMessage)
         # Update user messages
-        EasyUtils.simpleRequest(EasyUtils.requestManager.Post, "http", args.host, args.port, 'addUserMessage', f'historyID={historyID}&userMessage={EasyUtils.makeSafeForURL(newMessage)}')
+        EasyUtils.simpleRequest(EasyUtils.requestManager.Post, "http", args.host, args.port, 'chat/addUserMessage', f'historyID={historyID}&userMessage={EasyUtils.makeSafeForURL(newMessage)}')
         # Start a new thread to send the request
         chatRequestTask = task_chatRequest()
         self.chatRequestWorker = WorkerManager(
@@ -558,7 +558,7 @@ class MainWindow(Window_MainWindow):
         self.subChatPage.setModelSettingFrame(
             rootItemText = QCA.translate("MainWindow", "设置"),
             text = "来源与模型",
-            modelInfos = EasyUtils.simpleRequest(EasyUtils.requestManager.Get, "http", args.host, args.port, 'getModelsInfo', None),
+            modelInfos = EasyUtils.simpleRequest(EasyUtils.requestManager.Get, "http", args.host, args.port, 'chat/getModelsInfo', None),
             modelSection = 'Input Params',
             modelOption = 'Model',
             modelDefaultValue = None,
@@ -617,7 +617,7 @@ class MainWindow(Window_MainWindow):
             headerLabels = ["源", "API Key"],
             section = 'Chat Params',
             option = 'API Keys',
-            defaultValue = {source: '' for source in EasyUtils.simpleRequest(EasyUtils.requestManager.Get, "http", args.host, args.port, 'getModelsInfo', None).keys()}
+            defaultValue = {source: '' for source in EasyUtils.simpleRequest(EasyUtils.requestManager.Get, "http", args.host, args.port, 'chat/getModelsInfo', None).keys()}
         )
 
         self.ui.Page_Settings.addSubPage(

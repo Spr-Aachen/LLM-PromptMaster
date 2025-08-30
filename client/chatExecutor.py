@@ -47,7 +47,7 @@ def chatRequest(
         query = f"historyID={historyID}&source={sourceName}&env={env}&model={model}&apiKey={apiKey}&testTimes={testTimes}"
     if type == 'assistant':
         query = f"historyID={historyID}&source={sourceName}&env={env}&code={code}&apiKey={apiKey}&testTimes={testTimes}"
-    url = f"http://{host}:{port}/{type}{f'?{query}' if len(query) > 0 else ''}"
+    url = f"http://{host}:{port}/chat/{type}{f'?{query}' if len(query) > 0 else ''}"
     headers = {
         'Authorization': oAuth_token
     }
