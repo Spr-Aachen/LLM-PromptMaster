@@ -23,7 +23,7 @@ def run(
     resourceDir = Path(sys._MEIPASS).as_posix() if getattr(sys, 'frozen', None) else currentDir
     serverDir = Path(f'{resourceDir}{os.sep}server').as_posix()
     serverFile = Path(f'{serverDir}{os.sep}main.py').as_posix()
-    serverCMD = f'python "{serverFile}" --host "{host}" --port {port} --profileDir "{profileDir}"'
+    serverCMD = f'python "{serverFile}" --host "{host}" --port {port}'
     Popen(serverCMD)
     clientDir = Path(f'{resourceDir}{os.sep}client').as_posix()
     clientFile = Path(f'{clientDir}{os.sep}main.py').as_posix()
