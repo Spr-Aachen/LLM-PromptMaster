@@ -1,26 +1,23 @@
-# Frontend
-**/*.ui
-**/*.ts
-**/*.qm
+# Client assets
 **/*.qrc
+**/*.ui
 **/*.png
 **/*.ico
-**/*.ipynb
 
-# Backend
+# Server
 **/sql/
-
-# Frontend&Backend generated files
-**/TestResult.json
-**/User Profile/
 
 # Generated contents
 **/__pycache__/
+**/TestResult.json
+**/User Profile/
+
+# Built contents
 **/*.build/
 **/*.dist/
-**/build/
-**/dist/
 
 # Others
-**/*venv/
+**/.vscode/
+**/*.spec
+**/*.ipynb
 *.txt
