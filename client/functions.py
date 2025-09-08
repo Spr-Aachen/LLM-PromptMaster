@@ -16,17 +16,13 @@ class CustomSignals_Functions(QObject):
     '''
     Set up signals for functions
     '''
-    # Run task
-    Signal_ExecuteTask = Signal(tuple)
+    executeTask = Signal(tuple)
+    taskStatus = Signal(str, str)
 
-    # Monitor task
-    Signal_TaskStatus = Signal(str, str)
-
-    # Force exit
-    Signal_ForceQuit = Signal()
+    forceQuit = Signal()
 
 
-FunctionSignals = CustomSignals_Functions()
+functionSignals = CustomSignals_Functions()
 
 ##############################################################################################################################
 
@@ -334,16 +330,16 @@ class WorkerManager(QWorker.WorkerManager):
         self.worker.signals.result.connect(self.signals.result.emit)
         self.worker.signals.finished.connect(self.signals.finished.emit)
         self.signals.started.connect(
-            lambda: FunctionSignals.Signal_TaskStatus.emit(self.executeMethodName, TaskStatus.Started)
+            lambda: functionSignals.taskStatus.emit(self.executeMethodName, TaskStatus.Started)
         )
         self.signals.error.connect(
-            lambda: FunctionSignals.Signal_TaskStatus.emit(self.executeMethodName, TaskStatus.Failed)
+            lambda: functionSignals.taskStatus.emit(self.executeMethodName, TaskStatus.Failed)
         )
         self.signals.finished.connect(
-            lambda: FunctionSignals.Signal_TaskStatus.emit(self.executeMethodName, TaskStatus.Finished)
+            lambda: functionSignals.taskStatus.emit(self.executeMethodName, TaskStatus.Finished)
         )
 
-        FunctionSignals.Signal_ForceQuit.connect(self.terminate)
+        functionSignals.forceQuit.connect(self.terminate)
 
     def _validateParams(self, unvalidatedParams):
         validatedParams = []
@@ -363,7 +359,7 @@ class WorkerManager(QWorker.WorkerManager):
 
     def terminate(self):
         super().terminate()
-        FunctionSignals.Signal_TaskStatus.emit(self.executeMethodName, TaskStatus.Failed)
+        functionSignals.taskStatus.emit(self.executeMethodName, TaskStatus.Failed)
 
 
 def Function_SetMethodExecutor(

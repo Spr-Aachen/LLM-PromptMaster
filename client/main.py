@@ -12,7 +12,7 @@ from PySide6.QtCore import QCoreApplication as QCA
 from PySide6.QtGui import QTextCursor, QAction, QStandardItem
 from PySide6.QtWidgets import *
 from QEasyWidgets import QFunctions as QFunc
-from QEasyWidgets import ComponentsSignals, Theme, currentTheme, IconBase, Status
+from QEasyWidgets import componentsSignals, Theme, currentTheme, IconBase, Status
 from QEasyWidgets.Windows import InputDialogBase
 from QEasyWidgets.Components import MenuBase
 
@@ -446,7 +446,7 @@ class MainWindow(Window_MainWindow):
         self.setWindowIcon(QIcon(EasyUtils.normPath(Path(currentDir).joinpath('assets/images/Logo.ico'))))
 
         # Theme toggler
-        ComponentsSignals.Signal_SetTheme.connect(
+        componentsSignals.setTheme.connect(
             lambda: self.ui.CheckBox_SwitchTheme.setChecked(
                 {Theme.Light: True, Theme.Dark: False}.get(currentTheme())
             )
@@ -455,11 +455,11 @@ class MainWindow(Window_MainWindow):
             checkBox = self.ui.CheckBox_SwitchTheme,
             checkedEvents = [
                 lambda: paramsManager.config.editConfig('Settings', 'Theme', Theme.Light),
-                lambda: ComponentsSignals.Signal_SetTheme.emit(Theme.Light) if currentTheme() != Theme.Light else None
+                lambda: componentsSignals.setTheme.emit(Theme.Light) if currentTheme() != Theme.Light else None
             ],
             uncheckedEvents = [
                 lambda: paramsManager.config.editConfig('Settings', 'Theme', Theme.Dark),
-                lambda: ComponentsSignals.Signal_SetTheme.emit(Theme.Dark) if currentTheme() != Theme.Dark else None
+                lambda: componentsSignals.setTheme.emit(Theme.Dark) if currentTheme() != Theme.Dark else None
             ],
             takeEffect = False
         )
@@ -636,7 +636,7 @@ class MainWindow(Window_MainWindow):
         self.subChatPage.inputEdit.setFocus()
 
         # Set Theme
-        ComponentsSignals.Signal_SetTheme.emit(paramsManager_chat.config.getValue('Settings', 'Theme', Theme.Auto))
+        componentsSignals.setTheme.emit(paramsManager_chat.config.getValue('Settings', 'Theme', Theme.Auto))
 
         # Show window
         self.show()
