@@ -18,6 +18,7 @@ class CustomSignals_Functions(QObject):
     '''
     executeTask = Signal(tuple)
     taskStatus = Signal(str, str)
+    tasksEnded = Signal()
 
     forceQuit = Signal()
 
@@ -312,6 +313,9 @@ class TaskStatus:
 
 
 class WorkerManager(QWorker.WorkerManager):
+    tasks: dict = {}
+    endAllTasks: bool = False
+
     def __init__(self,
         executeMethod: object = ...,
         executeParams: Optional[dict] = None,
@@ -339,7 +343,7 @@ class WorkerManager(QWorker.WorkerManager):
             lambda: functionSignals.taskStatus.emit(self.executeMethodName, TaskStatus.Finished)
         )
 
-        functionSignals.forceQuit.connect(self.terminate)
+        functionSignals.forceQuit.connect(self.terminateAll)
 
     def _validateParams(self, unvalidatedParams):
         validatedParams = []
@@ -356,10 +360,17 @@ class WorkerManager(QWorker.WorkerManager):
 
     def execute(self):
         super().execute(*self._validateParams(self.executeParams))
+        self.tasks.update({self: TaskStatus.Started})
 
     def terminate(self):
         super().terminate()
+        self.tasks.update({self: TaskStatus.Failed})
         functionSignals.taskStatus.emit(self.executeMethodName, TaskStatus.Failed)
+
+    def terminateAll(self):
+        self.endAllTasks = True
+        self.terminate()
+        functionSignals.tasksEnded.emit() if not TaskStatus.Started in self.tasks.values() else None
 
 
 def Function_SetMethodExecutor(
@@ -392,13 +403,13 @@ def Function_SetMethodExecutor(
             _setErrorOccuredFlag(),
             MessageBoxBase.pop(parentWindow, QMessageBox.Warning, "Failure", "发生异常", err),
             EasyUtils.runEvents([event for event, status in finishedEvents.items() if status == TaskStatus.Failed]) if finishedEvents is not None else None,
-        )
+        ) if not workerManager.endAllTasks else None
     )
     workerManager.signals.finished.connect(
         lambda: (
             Function_AnimateStackedWidget(QFunc.findParent(executeButton, QStackedWidget), target = 0) if terminateButton else None,
             EasyUtils.runEvents([event for event, status in finishedEvents.items() if (not isErrorOccurred and status == TaskStatus.Succeeded) or TaskStatus.Finished]) if finishedEvents is not None else None,
-        )
+        ) if not workerManager.endAllTasks else None
     )
 
     # Execution
