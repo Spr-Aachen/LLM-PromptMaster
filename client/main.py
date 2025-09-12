@@ -18,7 +18,7 @@ from QEasyWidgets.Components import MenuBase
 
 from functions import *
 from windows import *
-from view import *
+from pages import *
 from chatExecutor import *
 
 ##############################################################################################################################

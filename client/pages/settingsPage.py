@@ -1,13 +1,12 @@
 from typing import Type, Optional
 from PyEasyUtils import setRichText
 from PySide6.QtCore import Qt, QRect, QSize, SignalInstance
-from PySide6.QtCore import QCoreApplication as QCA
 from PySide6.QtWidgets import *
 from QEasyWidgets import QFunctions as QFunc
 from QEasyWidgets.Common import FileDialogMode
 from QEasyWidgets.Components import *
 
-from .common import SubPage, Page
+from .common import ComponentFlag, SubPage, Page
 #from assets import *
 from functions import *
 
@@ -29,15 +28,15 @@ class SubSettingsPage(SubPage):
             widget = label,
             text = setRichText(
                 size = size,
-                text = QCA.translate('MainWindow', text),
+                text = text,
             )
         )
 
     def _setButtonMenu(self, menuButton: MenuButton, widget):
         menuButton.setMenu(
             actionEvents = {
-                "重置": lambda: self.paramsManager.resetParam(widget),
-                "复制": lambda: QApplication.clipboard().setText(str(Function_GetParam(widget))),
+                self.tr("重置"): lambda: self.paramsManager.resetParam(widget),
+                self.tr("复制"): lambda: QApplication.clipboard().setText(str(Function_GetParam(widget))),
             }
         )
 
@@ -78,7 +77,11 @@ class SubSettingsPage(SubPage):
         lineEdit.setFileDialog(fileDialogMode, fileType, directory) if fileDialogMode is not None else None
         (paramsManager or self.paramsManager).setParam(lineEdit, section, option, defaultValue, setPlaceholderText = True, placeholderText = placeholderText)
         self._setButtonMenu(button, lineEdit)
-        self._addToContainer(rootItemText, toolBoxText, text, label, lineEdit, button)
+        containerDict = self._addToContainer(rootItemText, toolBoxText, label, lineEdit, button)
+        return {
+            ComponentFlag.LineEdit: lineEdit,
+            **containerDict
+        }
 
     def addCheckBoxFrame(self,
         rootItemText: Optional[str] = None, toolBoxText: Optional[str] = None, text: str = ..., toolTip: Optional[str] = None,
@@ -88,15 +91,19 @@ class SubSettingsPage(SubPage):
         checkBox = CheckBoxBase(self)
         button = MenuButton()
         self._setLabelText(label, text)
-        Function_ConfigureCheckBox(checkBox, checkedText = "已启动", uncheckedText = "未启动")
         checkBox.setToolTip(toolTip) if toolTip is not None else None
         (paramsManager or self.paramsManager).setParam(checkBox, section, option, defaultValue)
         self._setButtonMenu(button, checkBox)
-        self._addToContainer(rootItemText, toolBoxText, text, label, checkBox, button)
+        containerDict = self._addToContainer(rootItemText, toolBoxText, label, checkBox, button)
+        return {
+            ComponentFlag.CheckBox: checkBox,
+            **containerDict
+        }
 
     def addComboBoxFrame(self,
         rootItemText: Optional[str] = None, toolBoxText: Optional[str] = None, text: str = ..., toolTip: Optional[str] = None,
         items: list = ..., currentIndex: Optional[int] = None,
+        signal: Optional[SignalInstance] = None, textDict: Optional[dict] = None,
         section: str = ..., option: str = ..., defaultValue: str = ..., paramsManager: Optional[ParamsManager] = None,
     ):
         label = LabelBase(self)
@@ -105,24 +112,49 @@ class SubSettingsPage(SubPage):
         self._setLabelText(label, text)
         comboBox.setToolTip(toolTip) if toolTip is not None else None
         comboBox.addItems(items)
-        (paramsManager or self.paramsManager).setParam(comboBox, section, option, defaultValue)
+        if signal and textDict:
+            signal.connect(
+                lambda val: comboBox.setCurrentText(
+                    EasyUtils.findKey(textDict, val)
+                ) if EasyUtils.findKey(textDict, val) != comboBox.currentText() else None
+            )
+            comboBox.currentIndexChanged.connect(
+                lambda: (
+                    (paramsManager or self.paramsManager).config.editConfig(
+                        section, option, textDict.get(comboBox.currentText())
+                    ),
+                    signal.emit(
+                        textDict.get(comboBox.currentText())
+                    )
+                )
+            )
+        else:
+            (paramsManager or self.paramsManager).setParam(comboBox, section, option, defaultValue)
         comboBox.setCurrentIndex(currentIndex) if currentIndex is not None else None
         self._setButtonMenu(button, comboBox)
-        self._addToContainer(rootItemText, toolBoxText, text, label, comboBox, button)
+        containerDict = self._addToContainer(rootItemText, toolBoxText, label, comboBox, button)
+        return {
+            ComponentFlag.ComboBox: comboBox,
+            **containerDict
+        }
 
-    def setAPIKeyTableFrame(self,
+    def addAPIKeyTableFrame(self,
         rootItemText: Optional[str] = None, toolBoxText: Optional[str] = None, text: str = ...,
         headerLabels: list = ...,
         section: str = ..., option: str = ..., defaultValue: str = ..., paramsManager: Optional[ParamsManager] = None,
     ):
         label = LabelBase()
-        self.apiKeyTable = Table_APIKeys()
+        table = Table_APIKeys()
         button = MenuButton()
         self._setLabelText(label, text)
-        self.apiKeyTable.setHorizontalHeaderLabels(headerLabels)
-        (paramsManager or self.paramsManager).setParam(self.apiKeyTable, section, option, defaultValue)
+        table.setHorizontalHeaderLabels(headerLabels)
+        (paramsManager or self.paramsManager).setParam(table, section, option, defaultValue)
         #self._setButtonMenu(button, table)
-        self._addToContainer(rootItemText, toolBoxText, text, label, self.apiKeyTable, button)
+        containerDict = self._addToContainer(rootItemText, toolBoxText, label, table, button)
+        return {
+            ComponentFlag.Table: table,
+            **containerDict
+        }
 
 
 class SettingsPage(Page):
@@ -130,25 +162,5 @@ class SettingsPage(Page):
     """
     def __init__(self, parent = None):
         super().__init__(parent)
-
-        self.consoleButton = QPushButton()
-        self.consoleButton.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-        self.consoleButton.setStyleSheet("""
-            QPushButton {
-                image-position: center;
-                image: url(:/Button_Icon/images/icons/Console.png);
-                padding: 18px;
-                background-color: transparent;
-                border-width: 0px;
-                border-style: solid;
-            }
-            QPushButton:hover {
-                background-color: rgba(201, 210, 222, 33);
-            }
-        """)
-        self.consoleButton.clicked.connect(
-            lambda: EasyUtils.subprocessManager().create("cmd.exe /c start cmd.exe")
-        )
-        self.navigationAreaLayout.addWidget(self.consoleButton)
 
 ##############################################################################################################################

@@ -5,7 +5,7 @@ from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import *
 
 from components import *
-from view import ChatPage, SettingsPage
+from pages import ChatPage, SettingsPage
 
 
 class Ui_MainWindow(object):
