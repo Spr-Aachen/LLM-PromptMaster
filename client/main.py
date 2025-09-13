@@ -453,15 +453,16 @@ class MainWindow(Window_MainWindow):
         )
         Function_ConfigureCheckBox(
             checkBox = self.ui.CheckBox_SwitchTheme,
-            checkedEvents = [
-                lambda: paramsManager.config.editConfig('Settings', 'Theme', Theme.Light),
-                lambda: componentsSignals.setTheme.emit(Theme.Light) if currentTheme() != Theme.Light else None
-            ],
-            uncheckedEvents = [
-                lambda: paramsManager.config.editConfig('Settings', 'Theme', Theme.Dark),
-                lambda: componentsSignals.setTheme.emit(Theme.Dark) if currentTheme() != Theme.Dark else None
-            ],
-            takeEffect = False
+            checkedText = "☀",
+            checkedEvents = {
+                lambda: paramsManager.config.editConfig('Settings', 'Theme', Theme.Light): False,
+                lambda: componentsSignals.setTheme.emit(Theme.Light) if currentTheme() != Theme.Light else None : False
+            },
+            uncheckedText = "☼",
+            uncheckedEvents = {
+                lambda: paramsManager.config.editConfig('Settings', 'Theme', Theme.Dark) : False,
+                lambda: componentsSignals.setTheme.emit(Theme.Dark) if currentTheme() != Theme.Dark else None : False
+            }
         )
 
         # Window controling buttons

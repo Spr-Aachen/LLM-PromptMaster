@@ -30,25 +30,23 @@ functionSignals = CustomSignals_Functions()
 def Function_ConfigureCheckBox(
     checkBox: QCheckBox,
     checkedText: Optional[str] = None,
-    checkedEvents: list = [],
+    checkedEvents: dict = {},
     uncheckedText: Optional[str] = None,
-    uncheckedEvents: list = [],
-    takeEffect: bool = False
+    uncheckedEvents: dict = {},
 ):
     '''
     Function to configure checkbox
     '''
     if checkedText is not None:
-        checkedEvents.append(lambda: checkBox.setText(checkedText))
+        checkedEvents[lambda: checkBox.setText(checkedText)] = True
     if uncheckedText is not None:
-        uncheckedEvents.append(lambda: checkBox.setText(uncheckedText))
+        uncheckedEvents[lambda: checkBox.setText(uncheckedText)] = True
 
     checkBox.toggled.connect(
-        lambda IsChecked: EasyUtils.runEvents(checkedEvents if IsChecked else uncheckedEvents)
+        lambda isChecked: EasyUtils.runEvents(checkedEvents.keys() if isChecked else uncheckedEvents.keys())
     )
 
-    EasyUtils.runEvents(checkedEvents) if takeEffect and checkBox.isChecked() else None
-    EasyUtils.runEvents(uncheckedEvents) if takeEffect and not checkBox.isChecked() else None
+    EasyUtils.runEvents([event for event, takeEffect in (checkedEvents if checkBox.isChecked() else uncheckedEvents).items() if takeEffect])
 
 ##############################################################################################################################
 
