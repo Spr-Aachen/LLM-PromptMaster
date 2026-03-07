@@ -150,6 +150,7 @@ class SubSettingsPage(SubPage):
         table.setHorizontalHeaderLabels(headerLabels)
         (paramsManager or self.paramsManager).setParam(table, section, option, defaultValue)
         #self._setButtonMenu(button, table)
+        self.apiKeyTable = table
         containerDict = self._addToContainer(rootItemText, toolBoxText, label, table, button)
         return {
             ComponentFlag.Table: table,

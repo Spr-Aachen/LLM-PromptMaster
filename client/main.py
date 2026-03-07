@@ -34,7 +34,7 @@ _, isFileCompiled = EasyUtils.getFileInfo()
 
 ##############################################################################################################################
 
-# 启动参数解析，启动环境，应用端口由命令行传入
+# 启动参数解析, 启动环境, 应用端口由命令行传入
 parser = argparse.ArgumentParser()
 parser.add_argument("--host", help = "主机地址",   type = str, default = "localhost")
 parser.add_argument("--port", help = "端口",       type = int, default = 8080)
@@ -593,8 +593,8 @@ class MainWindow(Window_MainWindow):
             ) if self.currentConversationItem() is not None else None,
             inputEditKeyEnterPressedEvent = self.sendMessage,
             inputEditPlaceholderText = """
-            请在此区域输入您的问题，点击 Send 或按下 Ctrl+Enter 发送提问
-            如果只返回了问题而没有答案，请等待几秒或者换一个模型试试
+            请在此区域输入您的问题, 点击 Send 或按下 Ctrl+Enter 发送提问
+            如果只返回了问题而没有答案, 请等待几秒或者换一个模型试试
             """,
             #loadQuestionsEvent = self.loadQuestions,
             sendEvent = self.sendMessage,
@@ -612,7 +612,7 @@ class MainWindow(Window_MainWindow):
         )
 
         self.subSettingsPage = SubSettingsPage(self.ui.Page_Settings, paramsManager)
-        self.subSettingsPage.setAPIKeyTableFrame(
+        self.subSettingsPage.addAPIKeyTableFrame(
             rootItemText = QCA.translate('MainWindow', "参数设置"),
             text = QCA.translate('MainWindow', "API Key"),
             headerLabels = ["源", "API Key"],
