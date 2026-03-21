@@ -1,23 +1,19 @@
+# Editor config
+**/.vscode/
+
 # Client assets
 **/*.qrc
 **/*.ui
 **/*.png
 **/*.ico
 
-# Server
-**/sql/
-
 # Generated contents
 **/__pycache__/
-**/TestResult.json
-**/User Profile/
+**/logs/
 
 # Built contents
-**/*.build/
-**/*.dist/
+**/build/
+**/dist/
 
 # Others
-**/.vscode/
-**/*.spec
-**/*.ipynb
 *.txt

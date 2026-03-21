@@ -38,7 +38,7 @@ _, isFileCompiled = EasyUtils.getFileInfo()
 parser = argparse.ArgumentParser()
 parser.add_argument("--host", help = "主机地址",   type = str, default = "localhost")
 parser.add_argument("--port", help = "端口",       type = int, default = 8080)
-parser.add_argument("--profileDir", help = "配置目录", type = str, default = Path(currentDir).joinpath('Profile').as_posix())
+parser.add_argument("--profileDir", help = "配置目录", type = str, default = Path(currentDir).parent.joinpath('data', 'client').as_posix())
 args = parser.parse_args()
 
 profileDir = args.profileDir
