@@ -1,4 +1,4 @@
-from typing import Optional
+import ast
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import *
 from QEasyWidgets import QFunctions as QFunc
@@ -67,7 +67,7 @@ class Table_APIKeys(TableBase):
     def setValue(self, params: dict = {'%Source%': '%APIKey%'}):
         self.clearRows()
         super().setColumnCount(self.columnCount())
-        for key, value in (params if isinstance(params, dict) else eval(params)).items():
+        for key, value in (params if isinstance(params, dict) else ast.literal_eval(params)).items():
             QApplication.instance().processEvents()
             param = (key, value)
             self.addRow(param)

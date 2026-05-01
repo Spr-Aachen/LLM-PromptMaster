@@ -1,3 +1,4 @@
+import ast
 import PyEasyUtils as EasyUtils
 from typing import Union, Optional
 from PySide6.QtCore import Qt, QObject, Signal, QThreadPool
@@ -137,23 +138,23 @@ def Function_SetWidgetValue(
             EditConfig(value) if str(value) in itemTexts else None
 
     if isinstance(widget, (QSpinBox, QSlider)):
-        widget.setValue(int(eval(str(value)) * times))
+        widget.setValue(int(ast.literal_eval(str(value)) * times))
         def EditConfig(value):
-            config.editConfig(section, option, str(eval(str(value)) / times))
+            config.editConfig(section, option, str(ast.literal_eval(str(value)) / times))
         if config is not None:
             widget.valueChanged.connect(EditConfig)
             EditConfig(value)
 
     if isinstance(widget, (QDoubleSpinBox, SliderBase)):
-        widget.setValue(float(eval(str(value)) * times))
+        widget.setValue(float(ast.literal_eval(str(value)) * times))
         def EditConfig(value):
-            config.editConfig(section, option, str(eval(str(value)) / times))
+            config.editConfig(section, option, str(ast.literal_eval(str(value)) / times))
         if config is not None:
             widget.valueChanged.connect(EditConfig)
             EditConfig(value)
 
     if isinstance(widget, (QCheckBox, QRadioButton)):
-        widget.setChecked(eval(str(value)))
+        widget.setChecked(ast.literal_eval(str(value)))
         def EditConfig(value):
             config.editConfig(section, option, str(value))
         if config is not None:
@@ -161,7 +162,7 @@ def Function_SetWidgetValue(
             EditConfig(value)
 
     if isinstance(widget, (Table_APIKeys)):
-        widget.setValue(eval(str(value)))
+        widget.setValue(ast.literal_eval(str(value)))
         def EditConfig(value):
             config.editConfig(section, option, str(value))
         if config is not None:
