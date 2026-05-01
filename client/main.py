@@ -2,6 +2,7 @@
 
 import os
 import sys
+import json
 import argparse
 import PyEasyUtils as EasyUtils
 from datetime import date, datetime
@@ -43,6 +44,19 @@ args = parser.parse_args()
 
 profileDir = args.profileDir
 configDir = Path(profileDir).joinpath('config').as_posix()
+
+##############################################################################################################################
+
+def requestJson(path: str, payload: dict):
+    """
+    以 JSON body 发送 POST 请求，长文本不再拼进 query
+    请求体保持 ASCII 转义，避免底层 http.client 以 latin-1 编码非 ASCII 字符
+    """
+    return EasyUtils.simpleRequest(
+        EasyUtils.requestManager.Post, "http", args.host, args.port, path, None,
+        {"Content-Type": "application/json"},
+        json.dumps(payload)
+    )
 
 ##############################################################################################################################
 
@@ -129,7 +143,7 @@ class PromptWindow(Window_PromptWindow):
         # Get the current time as the name of prompt
         promptName = datetime.now().strftime("%Y%m%d%H%M%S") if name is None else name
         # 
-        promptID, promptName = EasyUtils.simpleRequest(EasyUtils.requestManager.Post, "http", args.host, args.port, 'chat/createPrompt', f'name={EasyUtils.makeSafeForURL(promptName)}')
+        promptID, promptName = requestJson('chat/createPrompt', {'name': promptName})
         # Set role item
         item = QStandardItem(promptName)
         self._setPromptID(item, promptID)
@@ -149,7 +163,7 @@ class PromptWindow(Window_PromptWindow):
             )
             if ok and newName:
                 promptID = self._getPromptID(item)
-                EasyUtils.simpleRequest(EasyUtils.requestManager.Post, "http", args.host, args.port, 'chat/renamePrompt', f'promptID={promptID}&newName={EasyUtils.makeSafeForURL(newName)}')
+                requestJson('chat/renamePrompt', {'promptID': promptID, 'newName': newName})
                 item.setText(newName)
 
     def deleteCurrentPrompt(self):
@@ -174,7 +188,7 @@ class PromptWindow(Window_PromptWindow):
         promptID = self._getPromptID(self.currentRoleItem())
         if promptID is None:
             return
-        EasyUtils.simpleRequest(EasyUtils.requestManager.Post, "http", args.host, args.port, 'chat/savePrompt', f'promptID={promptID}&prompt={EasyUtils.makeSafeForURL(prompt)}')
+        requestJson('chat/savePrompt', {'promptID': promptID, 'prompt': prompt})
 
     def initUI(self):
         self.titleArea.setText('Prompt Manager')
@@ -289,7 +303,7 @@ class MainWindow(Window_MainWindow):
         # Get the current time as the name of conversation
         conversationName = datetime.now().strftime("%Y%m%d%H%M%S") if name is None else name
         # 
-        historyID, conversationName = EasyUtils.simpleRequest(EasyUtils.requestManager.Post, "http", args.host, args.port, 'chat/createConversation', f'name={EasyUtils.makeSafeForURL(conversationName)}')
+        historyID, conversationName = requestJson('chat/createConversation', {'name': conversationName})
         # Set conversation item
         item = QStandardItem(conversationName)
         self._setHistoryID(item, historyID)
@@ -309,7 +323,7 @@ class MainWindow(Window_MainWindow):
             )
             if ok and newName:
                 historyID = self._getHistoryID(item)
-                EasyUtils.simpleRequest(EasyUtils.requestManager.Post, "http", args.host, args.port, 'chat/renameConversation', f'historyID={historyID}&newName={EasyUtils.makeSafeForURL(newName)}')
+                requestJson('chat/renameConversation', {'historyID': historyID, 'newName': newName})
                 item.setText(newName)
 
     def deleteConversation(self):
@@ -333,7 +347,7 @@ class MainWindow(Window_MainWindow):
     def saveQuestion(self, historyID, question: str):
         if self.currentConversationItem() is None:
             return
-        EasyUtils.simpleRequest(EasyUtils.requestManager.Post, "http", args.host, args.port, 'chat/saveQuestion', f'historyID={historyID}&question={EasyUtils.makeSafeForURL(question)}')
+        requestJson('chat/saveQuestion', {'historyID': historyID, 'question': question})
 
     def applyPrompt(self):
         promptID = self.promptWindow.currentPromptID()
@@ -363,7 +377,7 @@ class MainWindow(Window_MainWindow):
             break
 
     def recieveAnswer(self, historyID, recievedText, conversationName):
-        messages = EasyUtils.simpleRequest(EasyUtils.requestManager.Post, "http", args.host, args.port, 'chat/recieveAnswer', f'historyID={historyID}&recievedText={recievedText}')
+        messages = requestJson('chat/recieveAnswer', {'historyID': historyID, 'recievedText': recievedText})
         # Update assistant message
         self._addMessage('assistant', messages) if self.currentConversationName() == conversationName else None
 
@@ -398,7 +412,7 @@ class MainWindow(Window_MainWindow):
         # Display new user message
         self._addMessage('user', newMessage)
         # Update user messages
-        EasyUtils.simpleRequest(EasyUtils.requestManager.Post, "http", args.host, args.port, 'chat/addUserMessage', f'historyID={historyID}&userMessage={EasyUtils.makeSafeForURL(newMessage)}')
+        requestJson('chat/addUserMessage', {'historyID': historyID, 'message': newMessage})
         # Start a new thread to send the request
         chatRequestTask = task_chatRequest()
         self.chatRequestWorker = WorkerManager(
@@ -556,6 +570,7 @@ class MainWindow(Window_MainWindow):
 
         # view
         self.subChatPage = SubChatPage(self.ui.Page_Chat, paramsManager_chat)
+        capabilities = EasyUtils.simpleRequest(EasyUtils.requestManager.Get, "http", args.host, args.port, 'chat/getCapabilities', None)
         self.subChatPage.setModelSettingFrame(
             rootItemText = QCA.translate("MainWindow", "设置"),
             text = "来源与模型",
@@ -571,6 +586,7 @@ class MainWindow(Window_MainWindow):
             rootItemText = QCA.translate("MainWindow", "设置"),
             text = "类型与角色",
             manageRoleEvent = self.manageRole,
+            assistantSources = tuple(capabilities.get('assistantSources', ())),
             assistantIDSection = 'Input Params',
             assistantIDOption = 'AssistantID',
             assistantIDDefaultValue = None,

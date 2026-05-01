@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import json
 import json_repair
 import time
 import requests
@@ -23,44 +22,24 @@ def chatRequest(
     testTimes: Optional[int] = None,
     stream: bool = True
 ):
-    # Get token
-    headers = {
-        'P-Rtoken': "...",
-        'P-Auth': "...",
-        "P-AppId": "..."
-    }
-    response = requests.get(
-        url = f"http://{host}:{port}/auth",
-        headers = headers
-    )
-    if response.status_code == 200:
-        res_token = response.json()
-        Token = res_token.get("data", {})
-        oAuth_token = f"Bearer {Token}"
-    else:
-        oAuth_token = ""
-        yield "Request failed", response.status_code
-        return
-
     # Post message
-    if type == 'gpt':
-        query = f"historyID={historyID}&source={sourceName}&env={env}&model={model}&apiKey={apiKey}&testTimes={testTimes}"
-    if type == 'assistant':
-        query = f"historyID={historyID}&source={sourceName}&env={env}&code={code}&apiKey={apiKey}&testTimes={testTimes}"
-    url = f"http://{host}:{port}/chat/{type}{f'?{query}' if len(query) > 0 else ''}"
-    headers = {
-        'Authorization': oAuth_token
-    }
     payload = {
+        'historyID': historyID,
+        'source': sourceName,
+        'env': env,
         'message': message,
-        'options': options
-    } if options is not None else {
-        'message': message
+        'options': options,
+        'apiKey': apiKey,
+        'testTimes': testTimes,
     }
+    if type == 'gpt':
+        payload['model'] = model
+    if type == 'assistant':
+        payload['code'] = code
+    url = f"http://{host}:{port}/chat/{type}"
     with requests.post(
         url = url,
-        headers = headers,
-        data = json.dumps(payload),
+        json = payload,
         stream = stream
     ) as response:
         if response.status_code == 200:
@@ -69,8 +48,11 @@ def chatRequest(
                 result = repairedContent['data']
                 yield result, statusCode
         else:
-            yield "Request failed", response.status_code
-            return
+            try:
+                errorMessage = response.json().get("error", {}).get("message", "Request failed")
+            except Exception:
+                errorMessage = "Request failed"
+            yield errorMessage, response.status_code
 
 
 class task_chatRequest:

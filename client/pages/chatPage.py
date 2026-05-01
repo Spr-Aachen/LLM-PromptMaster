@@ -24,6 +24,8 @@ class SubChatPage(SubPage):
 
         self.paramsManager = paramsManager
 
+        self.assistantSources = set()
+
         layout = self.cleanLayout()
         layout.addWidget(self.contentWidget, 0, 0)
 
@@ -93,6 +95,7 @@ class SubChatPage(SubPage):
     def setRoleSettingFrame(self,
         rootItemText: Optional[str] = None, toolBoxText: Optional[str] = None, text: str = ...,
         manageRoleEvent: object = ...,
+        assistantSources: tuple = (),
         assistantIDSection: str = ..., assistantIDOption: str = ..., assistantIDDefaultValue: str = ..., placeholderText: str = "",
         typeSection: str = ..., typeOption: str = ..., typeDefaultValue: str = ...,
     ):
@@ -109,6 +112,24 @@ class SubChatPage(SubPage):
             )
         )
         self.paramsManager.setParam(self.comboBox_type, typeSection, typeOption, typeDefaultValue)
+        # 只展示当前来源支持的组合
+        self.assistantSources = set(assistantSources)
+        if hasattr(self, "comboBox_source"):
+            self.comboBox_source.currentTextChanged.connect(self._updateAvailableTypes)
+        self._updateAvailableTypes()
+
+    def _updateAvailableTypes(self, source: Optional[str] = None):
+        if not hasattr(self, "comboBox_type") or not hasattr(self, "comboBox_source"):
+            return
+        source = self.comboBox_source.currentText() if source is None else source
+        availableTypes = ['gpt', 'assistant'] if source in self.assistantSources else ['gpt']
+        currentType = self.comboBox_type.currentText()
+        self.comboBox_type.blockSignals(True)
+        self.comboBox_type.clear()
+        self.comboBox_type.addItems(availableTypes)
+        self.comboBox_type.blockSignals(False)
+        self.comboBox_type.setCurrentText(currentType if currentType in availableTypes else 'gpt')
+        self.stackedWidget_roleOrAssistant.setCurrentIndex(0 if self.comboBox_type.currentText() == 'gpt' else 1)
 
     def _addModelSettingFrame(self,
         rootItemText: Optional[str] = None, toolBoxText: Optional[str] = None, text: str = ...,
