@@ -132,7 +132,7 @@ class SubSettingsPage(SubPage):
             (paramsManager or self.paramsManager).setParam(comboBox, section, option, defaultValue)
         comboBox.setCurrentIndex(currentIndex) if currentIndex is not None else None
         self._setButtonMenu(button, comboBox)
-        containerDict = self._addToContainer(rootItemText, toolBoxText, label, comboBox, button)
+        containerDict = self._addToContainer(rootItemText, toolBoxText, text, label, comboBox, button)
         return {
             ComponentFlag.ComboBox: comboBox,
             **containerDict
@@ -151,7 +151,7 @@ class SubSettingsPage(SubPage):
         (paramsManager or self.paramsManager).setParam(table, section, option, defaultValue)
         #self._setButtonMenu(button, table)
         self.apiKeyTable = table
-        containerDict = self._addToContainer(rootItemText, toolBoxText, label, table, button)
+        containerDict = self._addToContainer(rootItemText, toolBoxText, text, label, table, button)
         return {
             ComponentFlag.Table: table,
             **containerDict
