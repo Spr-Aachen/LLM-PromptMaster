@@ -8,6 +8,23 @@ from typing import Union, Optional
 
 ##############################################################################################################################
 
+def iterFrames(response):
+    """
+    按行解析服务端 NDJSON 帧 (一行一帧), 避免把多个 JSON 对象拼在一起解析
+    """
+    buffer = b""
+    statusCode = response.status_code
+    for content, statusCode in EasyUtils.responseParser(response, stream = True):
+        chunk = content if isinstance(content, bytes) else str(content).encode("utf-8")
+        buffer += chunk
+        while b"\n" in buffer:
+            line, buffer = buffer.split(b"\n", 1)
+            if line.strip():
+                yield line.decode("utf-8", errors = "replace"), statusCode
+    if buffer.strip():
+        yield buffer.decode("utf-8", errors = "replace"), statusCode
+
+
 def chatRequest(
     host, port,
     historyID: str,
@@ -43,10 +60,11 @@ def chatRequest(
         stream = stream
     ) as response:
         if response.status_code == 200:
-            for content, statusCode in EasyUtils.responseParser(response, stream = stream):
-                repairedContent = json_repair.loads(content)
-                result = repairedContent['data']
-                yield result, statusCode
+            for line, statusCode in iterFrames(response):
+                frame = json_repair.loads(line)
+                if not isinstance(frame, dict) or 'data' not in frame:
+                    continue
+                yield frame['data'], statusCode
         else:
             try:
                 errorMessage = response.json().get("error", {}).get("message", "Request failed")
