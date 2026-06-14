@@ -127,15 +127,24 @@ def Function_SetWidgetValue(
             EditConfig(value)
 
     if isinstance(widget, (QComboBox)):
-        itemTexts = []
-        for index in range(widget.count()):
-            itemTexts.append(widget.itemText(index))
-        widget.setCurrentText(str(value)) if str(value) in itemTexts else None
-        def EditConfig(value):
-            config.editConfig(section, option, str(value))
+        def _getItemValue(index: int):
+            # 有 userData 时以 userData 为准, 否则回退到显示文本
+            data = widget.itemData(index)
+            return widget.itemText(index) if data is None else str(data)
+        itemValues = [_getItemValue(index) for index in range(widget.count())]
+        itemTexts = [widget.itemText(index) for index in range(widget.count())]
+        targetValue = str(value)
+        if targetValue in itemValues:
+            widget.setCurrentIndex(itemValues.index(targetValue))
+        elif targetValue in itemTexts:
+            widget.setCurrentText(targetValue)
+        def EditConfig(index):
+            if index >= 0:
+                config.editConfig(section, option, _getItemValue(index))
         if config is not None:
-            widget.currentTextChanged.connect(EditConfig)
-            EditConfig(value) if str(value) in itemTexts else None
+            widget.currentIndexChanged.connect(EditConfig)
+            if targetValue in itemValues or targetValue in itemTexts:
+                EditConfig(widget.currentIndex())
 
     if isinstance(widget, (QSpinBox, QSlider)):
         widget.setValue(int(ast.literal_eval(str(value)) * times))

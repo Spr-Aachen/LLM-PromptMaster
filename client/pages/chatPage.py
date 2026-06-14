@@ -75,19 +75,19 @@ class SubChatPage(SubPage):
         self.stackedWidget_roleOrAssistant.addWidget(page1)
         self.stackedWidget_roleOrAssistant.addWidget(page2)
 
-        # Type
-        layout_type = QHBoxLayout()
-        layout_type.setSpacing(12)
-        label_type = LabelBase()
-        label_type.setText("类型")
-        layout_type.addWidget(label_type)
-        self.comboBox_type = ComboBoxBase()
-        self.comboBox_type.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed))
-        layout_type.addWidget(self.comboBox_type)
+        # Mode
+        layout_mode = QHBoxLayout()
+        layout_mode.setSpacing(12)
+        label_mode = LabelBase()
+        label_mode.setText("调用方式")
+        layout_mode.addWidget(label_mode)
+        self.comboBox_mode = ComboBoxBase()
+        self.comboBox_mode.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed))
+        layout_mode.addWidget(self.comboBox_mode)
 
         # Merge
         layout = QGridLayout()
-        layout.addLayout(layout_type, 0, 0)
+        layout.addLayout(layout_mode, 0, 0)
         layout.addWidget(self.stackedWidget_roleOrAssistant, 0, 1)
 
         self._addToContainer(rootItemText, toolBoxText, text, layout, QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed))
@@ -97,39 +97,41 @@ class SubChatPage(SubPage):
         manageRoleEvent: object = ...,
         assistantSources: tuple = (),
         assistantIDSection: str = ..., assistantIDOption: str = ..., assistantIDDefaultValue: str = ..., placeholderText: str = "",
-        typeSection: str = ..., typeOption: str = ..., typeDefaultValue: str = ...,
+        modeSection: str = ..., modeOption: str = ..., modeDefaultValue: str = ...,
     ):
         self._addRoleSettingFrame(rootItemText, toolBoxText, text)
         # role
         self.button_manageRole.clicked.connect(manageRoleEvent)
         # assistantID
         self.paramsManager.setParam(self.lineEdit_assistantID, assistantIDSection, assistantIDOption, assistantIDDefaultValue, True, placeholderText)
-        # type
-        self.comboBox_type.addItems(['gpt', 'assistant'])
-        self.comboBox_type.currentTextChanged.connect(
-            lambda text: (
-                self.stackedWidget_roleOrAssistant.setCurrentIndex(0 if text == 'gpt' else 1),
-            )
-        )
-        self.paramsManager.setParam(self.comboBox_type, typeSection, typeOption, typeDefaultValue)
-        # 只展示当前来源支持的组合
+        # mode
         self.assistantSources = set(assistantSources)
         if hasattr(self, "comboBox_source"):
-            self.comboBox_source.currentTextChanged.connect(self._updateAvailableTypes)
-        self._updateAvailableTypes()
+            self.comboBox_source.currentTextChanged.connect(self._updateAvailableModes)
+        self._updateAvailableModes()
+        self.paramsManager.setParam(self.comboBox_mode, modeSection, modeOption, modeDefaultValue)
+        self.comboBox_mode.currentIndexChanged.connect(self._updateRoleOrAssistantPage)
+        self._updateRoleOrAssistantPage()
 
-    def _updateAvailableTypes(self, source: Optional[str] = None):
-        if not hasattr(self, "comboBox_type") or not hasattr(self, "comboBox_source"):
+    def _updateAvailableModes(self, source: Optional[str] = None):
+        if not hasattr(self, "comboBox_mode") or not hasattr(self, "comboBox_source"):
             return
         source = self.comboBox_source.currentText() if source is None else source
-        availableTypes = ['gpt', 'assistant'] if source in self.assistantSources else ['gpt']
-        currentType = self.comboBox_type.currentText()
-        self.comboBox_type.blockSignals(True)
-        self.comboBox_type.clear()
-        self.comboBox_type.addItems(availableTypes)
-        self.comboBox_type.blockSignals(False)
-        self.comboBox_type.setCurrentText(currentType if currentType in availableTypes else 'gpt')
-        self.stackedWidget_roleOrAssistant.setCurrentIndex(0 if self.comboBox_type.currentText() == 'gpt' else 1)
+        currentMode = self.comboBox_mode.currentData() or 'chat'
+        modeItems = [("对话模型", "chat"), ("助手", "assistant")] if source in self.assistantSources else [("对话模型", "chat")]
+        self.comboBox_mode.blockSignals(True)
+        self.comboBox_mode.clear()
+        for label, mode in modeItems:
+            self.comboBox_mode.addItem(label, mode)
+        self.comboBox_mode.setCurrentIndex(-1)
+        self.comboBox_mode.blockSignals(False)
+        index = self.comboBox_mode.findData(currentMode)
+        self.comboBox_mode.setCurrentIndex(index if index >= 0 else 0)
+        self._updateRoleOrAssistantPage()
+
+    def _updateRoleOrAssistantPage(self):
+        if hasattr(self, "comboBox_mode"):
+            self.stackedWidget_roleOrAssistant.setCurrentIndex(0 if self.comboBox_mode.currentData() == 'chat' else 1)
 
     def _addModelSettingFrame(self,
         rootItemText: Optional[str] = None, toolBoxText: Optional[str] = None, text: str = ...,
@@ -268,7 +270,7 @@ class SubChatPage(SubPage):
         self.button_stop.clicked.connect(stopEvent)
 
     def blockInput(self, block: bool):
-        self.comboBox_type.setDisabled(block)
+        self.comboBox_mode.setDisabled(block)
         self.comboBox_source.setDisabled(block)
         self.comboBox_model.setDisabled(block)
         self.button_manageRole.setDisabled(block)

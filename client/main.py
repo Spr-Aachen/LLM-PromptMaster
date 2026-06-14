@@ -422,7 +422,7 @@ class MainWindow(Window_MainWindow):
                 historyID,
                 self.subChatPage.comboBox_source.currentText(),
                 None, #self.subChatPage.comboBox_env.currentText(),
-                self.subChatPage.comboBox_type.currentText(),
+                self.subChatPage.comboBox_mode.currentData(),
                 self.subChatPage.comboBox_model.currentText(),
                 self.subChatPage.lineEdit_assistantID.text(),
                 newMessage,
@@ -584,16 +584,16 @@ class MainWindow(Window_MainWindow):
         )
         self.subChatPage.setRoleSettingFrame(
             rootItemText = QCA.translate("MainWindow", "设置"),
-            text = "类型与角色",
+            text = "调用方式与角色",
             manageRoleEvent = self.manageRole,
             assistantSources = tuple(capabilities.get('assistantSources', ())),
             assistantIDSection = 'Input Params',
             assistantIDOption = 'AssistantID',
             assistantIDDefaultValue = None,
             placeholderText = "Please enter the assistant's ID",
-            typeSection = 'Input Params',
-            typeOption = 'Type',
-            typeDefaultValue = "gpt"
+            modeSection = 'Input Params',
+            modeOption = 'Mode',
+            modeDefaultValue = "chat"
         )
         self.subChatPage.setChatFrame(
             text = "聊天区域",
