@@ -49,8 +49,8 @@ configDir = Path(profileDir).joinpath('config').as_posix()
 
 def requestJson(path: str, payload: dict):
     """
-    以 JSON body 发送 POST 请求，长文本不再拼进 query
-    请求体保持 ASCII 转义，避免底层 http.client 以 latin-1 编码非 ASCII 字符
+    以 JSON body 发送 POST 请求, 长文本不再拼进 query
+    请求体保持 ASCII 转义, 避免底层 http.client 以 latin-1 编码非 ASCII 字符
     """
     return EasyUtils.simpleRequest(
         EasyUtils.requestManager.Post, "http", args.host, args.port, path, None,

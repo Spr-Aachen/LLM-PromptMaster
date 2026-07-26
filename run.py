@@ -21,7 +21,7 @@ rootDir = Path(__file__).resolve().parent
 serverEntry = rootDir.joinpath("server", "main.py")
 clientEntry = rootDir.joinpath("client", "main.py")
 
-# 运行时数据根目录：data/{server,client}, 单实例锁也在根下
+# 运行时数据根目录: data/{server,client}, 单实例锁也在根下
 dataDirName = "data"
 defaultDataDir = rootDir.joinpath(dataDirName)
 
